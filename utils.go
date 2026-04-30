@@ -1,13 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 )
 
-func AllowOnlyGet(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-		return false
+func writejson(w http.ResponseWriter, data any) {
+	w.Header().Set("Content-Type", "application/json")
+
+	b, err := json.Marshal(data)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
-	return true
+
+	w.Write(b)
 }

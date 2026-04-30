@@ -6,11 +6,19 @@ import (
 )
 
 func main() {
-	http.HandleFunc("/hello", Hello)
-	http.HandleFunc("/status", Status)
-	log.Println("The Programe will be running on the port 8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal("Sorry error in starting port", err)
-		return
+	mux := http.NewServeMux()
+	mux.HandleFunc("/HealthHandler", HealthHandler)
+	mux.HandleFunc("/EchoRequestHandler", EchoRequestHandler)
+	mux.HandleFunc("/SlowHandler", SlowHandler)
+
+	handler := LogMiddleware(RecoverMiddleware(mux))
+	server := http.Server{
+		Addr:    ":8080",
+		Handler: handler,
 	}
+
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatal(err)
+	}
+
 }
