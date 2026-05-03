@@ -5,15 +5,23 @@ import (
 )
 
 type Config struct {
-	Port string
+	Port   string
+	DBPath string
 }
 
 func Load_Config() *Config {
 	port := os.Getenv("Port")
+	dbpath := os.Getenv("DBPath")
+
 	if port == "" {
 		port = "8080"
 	}
+	if dbpath == "" {
+		dbpath = "tasks.db"
+	}
+
 	return &Config{
-		Port: port,
+		Port:   port,
+		DBPath: dbpath,
 	}
 }

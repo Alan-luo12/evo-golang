@@ -7,20 +7,27 @@ import (
 
 func main() {
 	r := NewRouter()
+
+	cfg := Load_Config()
+
 	r.HandleFunc("/HealthHandler", HealthHandler)
+	r.HandleFunc("/SubmitTaskHandler", SubmitTaskHandler)
 	r.HandleFunc("/EchoRequestHandler", EchoRequestHandler)
 	r.HandleFunc("/SlowHandler", SlowHandler)
+	r.HandleFunc("/GetTaskStatusHandler", GetTaskStatusHandler)
 
 	r.Use(LogMiddleware, RecoverMiddleware)
 
-	server := http.Server{
-		Addr:    ":" + Load_Config().Port,
+	Load_DB(cfg.DBPath)
+
+	Server := http.Server{
+		Addr:    ":" + cfg.Port,
 		Handler: r,
 	}
 
-	log.Println("the programe wiil be running on the port :", Load_Config().Port)
+	log.Println("[Success]server start at port", Load_Config().Port)
 
-	if err := server.ListenAndServe(); err != nil {
+	if err := Server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -1,0 +1,52 @@
+
+
+##VERSION 1.0/1.5/2.0
+
+##VERSION 3.0
+
+iwr http://localhost:8080/HealthHandler -Method Post -UseBasicParsing -ErrorAction SilentlyContinue
+iwr http://localhost:8080/HealthHandler -Method Put -UseBasicParsing -ErrorAction SilentlyContinue
+
+iwr http://localhost:8080/EchoRequestHandler -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
+$body = "invalid json"
+iwr http://localhost:8080/EchoRequestHandler -Method Post -Body $body -ContentType "application/json" -UseBasicParsing -ErrorAction SilentlyContinue
+$body = '{"msg":"test panic","panic":true}'
+iwr http://localhost:8080/EchoRequestHandler -Method Post -Body $body -ContentType "application/json" -UseBasicParsing -ErrorAction SilentlyContinue
+
+iwr http://localhost:8080/SlowHandler -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
+iwr http://localhost:8080/SlowHandler?ms=abc -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
+iwr http://localhost:8080/SlowHandler?ms=@ -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
+iwr http://localhost:8080/SlowHandler?ms=-100 -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
+
+iwr http://localhost:8080/SubmitTaskHandler -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
+$body = '{"delay_time":1000}'
+iwr http://localhost:8080/SubmitTaskHandler -Method Post -Body $body -ContentType "application/json" -UseBasicParsing -ErrorAction SilentlyContinue
+$body = '{"Name":"test","delay_time":1000,}'
+iwr http://localhost:8080/SubmitTaskHandler -Method Post -Body $body -ContentType "application/json" -UseBasicParsing -ErrorAction SilentlyContinue
+$body = '{"Name":"test","delay_time":"abc"}'
+iwr http://localhost:8080/SubmitTaskHandler -Method Post -Body $body -ContentType "application/json" -UseBasicParsing -ErrorAction SilentlyContinue
+
+iwr http://localhost:8080/GetTaskStatusHandler -Method Post -UseBasicParsing -ErrorAction SilentlyContinue
+iwr http://localhost:8080/GetTaskStatusHandler -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
+iwr http://localhost:8080/GetTaskStatusHandler?id=abc -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
+iwr http://localhost:8080/GetTaskStatusHandler?id=99999 -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
+
+iwr http://localhost:8080/NotFoundHandler -Method Get -UseBasicParsing -ErrorAction SilentlyContinue
+
+总结
+测试接口	测试错误场景	服务返回结果	是否符合预期
+HealthHandler	POST / PUT 方法错误	200（该接口未限制请求方法）	✅ 正常
+EchoRequestHandler	GET 方法错误	405 Method Not Allowed	✅ 符合
+EchoRequestHandler	非法 JSON 请求	400 Invalid json	✅ 符合
+EchoRequestHandler	主动触发 panic	500 服务器内部错误	✅ 符合
+SlowHandler	未传 ms 参数	400 BadRequest	✅ 符合
+SlowHandler	ms=abc（非数字）	400 BadRequest	✅ 符合
+SlowHandler	ms=-100（负数）	200（未做负数校验）	✅ 正常
+SubmitTaskHandler	GET 方法错误	405 Method Not Allowed	✅ 符合
+SubmitTaskHandler	缺失必填字段	正常创建（允许缺失）	✅ 正常
+SubmitTaskHandler	JSON 格式语法错误	400 解析失败	✅ 符合
+SubmitTaskHandler	类型错误（字符串传数字）	400 类型不匹配	✅ 符合
+GetTaskStatus	POST 方法错误	400 方法不允许	✅ 符合
+GetTaskStatus	未传 id 参数	400 参数解析失败	✅ 符合
+GetTaskStatus	id=abc（非数字）	400 参数解析失败	✅ 符合
+GetTaskStatus	id=99999（不存在）	404 任务不存在	✅ 符合
