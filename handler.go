@@ -78,6 +78,7 @@ func SubmitTaskHandler(w http.ResponseWriter, r *http.Request) {
 		Errorresponse(w, 400, 400, "Bad Request"+err.Error())
 		return
 	}
+	delay_time := req.Delay_time
 
 	res, err := DB.Exec("INSERT INTO tasks (name,status,delay_time) VALUES(?,'pending',?)", req.Name, req.Delay_time)
 	if err != nil {
@@ -92,27 +93,12 @@ func SubmitTaskHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("failed to get id", err)
 		return
 	}
-	_, err = DB.Exec("UPDATE tasks SET status='running', updated_at = CURRENT_TIMESTAMP WHERE id = ?", id)
-	if err != nil {
-		Errorresponse(w, 500, 500, "Internal Server Error"+err.Error())
-		log.Println("failed to running task")
-		return
-	}
 
-	delay_time := req.Delay_time
-	time.Sleep(time.Duration(delay_time) * time.Millisecond)
-
-	_, err = DB.Exec("UPDATE tasks SET status = 'done', updated_at = CURRENT_TIMESTAMP WHERE id = ?", id)
-	if err != nil {
-		log.Printf("failed to done task %v Errror %v", id, err)
-
-		Errorresponse(w, 500, 500, "Intenal Server Error"+err.Error())
-		return
-	}
+	go Processtask(id, delay_time)
 
 	Success(w, map[string]any{
 		"task_id": id,
-		"status":  "finished",
+		"status":  "submitted",
 	})
 }
 

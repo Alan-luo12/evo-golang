@@ -50,3 +50,6 @@ GetTaskStatus	POST 方法错误	400 方法不允许	✅ 符合
 GetTaskStatus	未传 id 参数	400 参数解析失败	✅ 符合
 GetTaskStatus	id=abc（非数字）	400 参数解析失败	✅ 符合
 GetTaskStatus	id=99999（不存在）	404 任务不存在	✅ 符合
+
+## VERSION 3.5 与 3.0 一致
+

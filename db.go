@@ -20,7 +20,7 @@ func Load_DB(dsn string) {
 	CREATE TABLE IF NOT EXISTS tasks(
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
-			status TEXT CHECK(status in ('pending','running','done','failed')),
+			status TEXT CHECK(status in ('pending','running','done')),
 			result TEXT,
 			delay_time INTEGER,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

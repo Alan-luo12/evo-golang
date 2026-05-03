@@ -25,3 +25,7 @@ powershell
 iwr "http://localhost:8080/GetTaskStatusHandler?id=1" -UseBasicParsing
 
 >一切正常
+
+## Version 3.5
+
+  和version3.0保持一致
