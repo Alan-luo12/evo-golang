@@ -53,3 +53,26 @@ GetTaskStatus	id=99999（不存在）	404 任务不存在	✅ 符合
 
 ## VERSION 3.5 与 3.0 一致
 
+
+
+##VERSION 4.0
+
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -s -X POST http://localhost:8080/EchoRequestHandler -H "Content-Type: application/json" -d "{\"message\": \"boom\", \"panic\": true}"
+{"code":4007,"msg":"bad request","data":null}
+
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -s -X GET http://localhost:8080/Submit
+{"code":4003,"msg":"invalid json","data":null}
+
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -s -X POST http://localhost:8080/Submit -H "Content-Type: application/json" -d "{\"name\": \"bad_json\""
+{"code":4004,"msg":"Bad Request","data":null}
+
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -s -X POST http://localhost:8080/Submit -H "Content-Type: application/json" -d "{\"name\": \"\", \"delay_time\": 100}"
+{"code":4004,"msg":"Bad Request","data":null}
+
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -s -X GET "http://localhost:8080/Getstatus?id=abc"
+{"code":4006,"msg":"Bad Request","data":null}
+
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -s -X GET "http://localhost:8080/Getstatus?id=999999"
+{"code":4041,"msg":"task not found","data":null}
+
+通过错误注入测试

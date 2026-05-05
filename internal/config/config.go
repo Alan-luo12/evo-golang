@@ -1,8 +1,10 @@
-package main
+package config
 
 import (
 	"os"
 )
+
+//两个字段，端口号和数据库路径
 
 type Config struct {
 	Port   string
@@ -10,18 +12,18 @@ type Config struct {
 }
 
 func Load_Config() *Config {
-	port := os.Getenv("Port")
-	dbpath := os.Getenv("DBPath")
-
+	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	if dbpath == "" {
-		dbpath = "tasks.db"
+
+	DBpath := os.Getenv("DBPATH")
+	if DBpath == "" {
+		DBpath = "tasks.db"
 	}
 
 	return &Config{
 		Port:   port,
-		DBPath: dbpath,
+		DBPath: DBpath,
 	}
 }

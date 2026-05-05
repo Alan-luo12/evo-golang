@@ -29,3 +29,25 @@ iwr "http://localhost:8080/GetTaskStatusHandler?id=1" -UseBasicParsing
 ## Version 3.5
 
   和version3.0保持一致
+
+
+## Verison 4.0
+
+1. 检查健康状态 (HealthHandler)
+(iwr -Uri http://localhost:8080/HealthHandler).Content
+
+2. 提交 Echo 请求 (EchoRequestHandler)
+(iwr -Uri http://localhost:8080/EchoRequestHandler -Method Post -Body '{"message": "Hello Server", "panic": false}' -ContentType "application/json").Content
+
+
+3. 测试慢响应接口 (SlowHandler - 模拟 500ms 延迟)
+(iwr -Uri "http://localhost:8080/SlowHandler?ms=500").Content
+
+
+4. 提交异步任务 (Submit)
+(iwr -Uri http://localhost:8080/Submit -Method Post -Body '{"name": "测试任务", "delay_time": 2000}' -ContentType "application/json").Content
+
+5. 查询任务状态 (Getstatus)
+(iwr -Uri "http://localhost:8080/Getstatus?id=1").Content
+
+>>>全部通过
