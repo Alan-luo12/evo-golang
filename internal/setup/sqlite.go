@@ -1,4 +1,4 @@
-package repo
+package setup
 
 import (
 	"database/sql"
@@ -16,7 +16,7 @@ func InitDB(dsn string) *sql.DB {
 
 	schema := `
 	CREATE TABLE IF NOT EXISTS tasks (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			id INTEGER PRIMARY KEY ,
 			name TEXT NOT NULL,
 			result TEXT,
 			status TEXT CHECK(status IN ('pending','running','done')),

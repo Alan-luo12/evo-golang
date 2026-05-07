@@ -12,11 +12,17 @@ import (
 	"app/pkg/response"
 )
 
-//三个简单接口函数
-
 type TaskHandler struct {
 	svc *service.TaskService
 }
+
+//用于DI注入，分层解耦思想
+
+func NewTaskHandler(svc *service.TaskService) *TaskHandler {
+	return &TaskHandler{svc: svc}
+}
+
+//三个简单接口函数
 
 func (h *TaskHandler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	response.Success(w, map[string]string{
@@ -57,12 +63,6 @@ func (h *TaskHandler) SlowHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-//用于DI注入，分层解耦思想
-
-func NewTaskHandler(svc *service.TaskService) *TaskHandler {
-	return &TaskHandler{svc: svc}
-}
-
 //带数据库的业务接口
 //对于service层返回出来的错误直接用response.Error()即可，但是对于本层自己出现的错误需要再()里面自己再写进去errorrs.NewXxxError
 
@@ -72,7 +72,7 @@ func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var t model.SubmitTaskReq
+	var t model.TaskSubmit
 	err := json.NewDecoder(r.Body).Decode(&t)
 	if err != nil {
 		response.Error(w, errors.NewUserError(4004, "Bad Request", err))

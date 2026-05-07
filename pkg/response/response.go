@@ -35,9 +35,11 @@ func Success(w http.ResponseWriter, data any) {
 
 func Error(w http.ResponseWriter, err error) {
 	if apperr, ok := err.(*errors.AppError); ok {
+		log.Printf("[Error] statsu:%v  code:%v  msg:%v  err:%v", apperr.HTTPStatus(), apperr.Code, apperr.Msg, apperr.Err)
 		WriteJSON(w, apperr.HTTPStatus(), apperr.Code, apperr.Msg, nil)
 		return
 	}
 
+	log.Printf("[Error] statsu:%v  code:%v  msg:%v  err:%v", http.StatusInternalServerError, 5000, "InrternalServerError", err)
 	WriteJSON(w, http.StatusInternalServerError, 5000, "InrternalServerError", nil)
 }

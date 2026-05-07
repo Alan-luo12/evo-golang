@@ -55,7 +55,7 @@ GetTaskStatus	id=99999（不存在）	404 任务不存在	✅ 符合
 
 
 
-##VERSION 4.0
+## VERSION 4.0
 
 PS C:\Users\罗宇轩\Desktop\go> curl.exe -s -X POST http://localhost:8080/EchoRequestHandler -H "Content-Type: application/json" -d "{\"message\": \"boom\", \"panic\": true}"
 {"code":4007,"msg":"bad request","data":null}
@@ -76,3 +76,30 @@ PS C:\Users\罗宇轩\Desktop\go> curl.exe -s -X GET "http://localhost:8080/Gets
 {"code":4041,"msg":"task not found","data":null}
 
 通过错误注入测试
+
+
+## Version 5.0
+
+PS C:\Users\罗宇轩\Desktop\go> (iwr -Uri http://localhost:8080/EchoRequestHandler -Method Post -Body '{"message":"boom","panic":true}' -ContentType "application/json" -ErrorAction SilentlyContinue).Content
+iwr : {"code":5002,"msg":"Manual Panic triggered","data":null}
+所在位置 行:1 字符: 2
++ (iwr -Uri http://localhost:8080/EchoRequestHandler -Method Post -Body ...
++  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-WebRequest]，WebException
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeWebRequestCommand
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -X GET http://localhost:8080/EchoRequestHandler
+{"code":40051,"msg":"Method Not Allowed","data":null}
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -X POST "http://localhost:8080/Getstatus?id=1"
+{"code":4005,"msg":"invalid method","data":null}
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -X POST http://localhost:8080/Submit -H "Content-Type: application/json" -d "{bad_json: missing_quotes}"
+{"code":4004,"msg":"Bad Request","data":null}
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -X GET "http://localhost:8080/Getstatus?id=abc123"
+{"code":4006,"msg":"Bad Request","data":null}
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -X GET "http://localhost:8080/Getstatus?id=-1"
+{"code":4002,"msg":"task id invalid","data":null}
+PS C:\Users\罗宇轩\Desktop\go> curl.exe -X GET "http://localhost:8080/Getstatus?id=9999999999999999"
+{"code":4041,"msg":"task not found","data":null}
+PS C:\Users\罗宇轩\Desktop\go> 
+
+错误测试通过
+hey -n 5000 -c 50 "http://localhost:8080/Getstatus?id=336034243949887489"

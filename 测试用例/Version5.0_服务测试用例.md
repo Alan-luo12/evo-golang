@@ -51,3 +51,28 @@ iwr "http://localhost:8080/GetTaskStatusHandler?id=1" -UseBasicParsing
 (iwr -Uri "http://localhost:8080/Getstatus?id=1").Content
 
 >>>全部通过
+
+
+## Version5.0
+
+ (iwr -Uri http://localhost:8080/Submit -Method Post -Body '{"name": "测试任务", "delay_time": 2000}' -ContentType "application/json").Content
+
+  {"code":0,"msg":"Success","data":{"task_id":335954282765352961,"status":"submitted"}}                                       
+
+
+(iwr -Uri "http://localhost:8080/Getstatus?id=335954282765352961").Content
+
+{"code":0,"msg":"Success","data":{"task_id":335954282765352961,"status":"done"}}
+
+
+curl.exe -X GET http://localhost:8080/HealthHandler
+
+{"code":0,"msg":"Success","data":{"time":"2026-05-06T23:28:17+08:00"}}
+
+
+
+ curl.exe -X GET "http://localhost:8080/SlowHandler?ms=150"
+
+{"code":0,"msg":"Success","data":{"delay_time":150}}
+
+>>全部通过

@@ -7,8 +7,9 @@ import (
 //两个字段，端口号和数据库路径
 
 type Config struct {
-	Port   string
-	DBPath string
+	Port      string
+	DBPath    string
+	RedisAddr string
 }
 
 func Load_Config() *Config {
@@ -22,8 +23,14 @@ func Load_Config() *Config {
 		DBpath = "tasks.db"
 	}
 
+	redisaddr := os.Getenv("RedisAddr")
+	if redisaddr == "" {
+		redisaddr = "localhost:6379"
+	}
+
 	return &Config{
-		Port:   port,
-		DBPath: DBpath,
+		Port:      port,
+		DBPath:    DBpath,
+		RedisAddr: redisaddr,
 	}
 }

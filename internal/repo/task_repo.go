@@ -19,7 +19,7 @@ func NewTaskRepo(db *sql.DB) *TaskRepo {
 //repo层具有的方法，负责有关数据库的操作，这里不能返回errors.NewxxxError
 
 func (r *TaskRepo) CreateTask(t *model.Task) (int64, error) {
-	res, err := r.DB.Exec("INSERT INTO tasks (name,status,delay_time) VALUES (?,'pending',?)", t.Name, t.DelayTime)
+	res, err := r.DB.Exec("INSERT INTO tasks (id,name,status,delay_time) VALUES (?,?,'pending',?)", t.ID, t.Name, t.DelayTime)
 	if err != nil {
 		return 0, err
 	}
