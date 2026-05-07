@@ -20,9 +20,10 @@ func NewRedisRepo(client *redis.Client) *RedisRepo {
 	}
 }
 
-func (r *RedisRepo) Enqueue(ctx context.Context, taskid int64, delaytime int) error {
+func (r *RedisRepo) Enqueue(ctx context.Context, name string, taskid int64, delaytime int) error {
 	var msg *model.TaskRedis
 	msg = &model.TaskRedis{
+		Name:      name,
 		ID:        taskid,
 		DelayTime: delaytime,
 	}

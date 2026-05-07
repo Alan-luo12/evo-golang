@@ -29,7 +29,7 @@ func LogMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(wrapper, r)
 
 		log.Printf(
-			"%s %s status=%d latency=%d",
+			"%s %s status=%d latency=%s",
 			r.Method,
 			r.URL.Path,
 			wrapper.status,

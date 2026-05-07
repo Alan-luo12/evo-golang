@@ -23,7 +23,9 @@ func main() {
 
 	cfg := config.Load_Config()
 	db := setup.InitDB(cfg.DBPath)
+	defer db.Close()
 	redis := setup.InitResdis(cfg.RedisAddr)
+	defer redis.Close()
 	//DI依赖注入，分层解耦思想，handelr依赖Service，service依赖repo，repo依赖数据库db，最后在main里面进行组装
 
 	redisrepo := repo.NewRedisRepo(redis)

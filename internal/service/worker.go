@@ -37,16 +37,31 @@ func (s *TaskService) processtask(ctx context.Context, id int64, name string, de
 	t := model.Task{
 		ID:        id,
 		Name:      name,
-		Status:    "pending",
+		Status:    "running",
 		DelayTime: delaytime,
 	}
-	s.repo.CreateTask(&t)
+	_, err := s.repo.CreateTask(&t)
+	if err != nil {
+		log.Printf("[Error] failed to create task in db %s", err)
+		return
+	}
 
-	s.repo.UpdateStatus(id, "running")
 	s.queuerepo.SetStatusCache(ctx, id, "running")
 
+	//关键逻辑，模拟任务执行的时间，实际中这里可能是调用第三方接口，或者执行一些复杂的计算等
 	time.Sleep(time.Duration(delaytime) * time.Millisecond)
 
-	s.repo.UpdateStatus(id, "done")
+	err = s.repo.UpdateStatus(id, "done")
+	if err != nil {
+		log.Printf("[Error] failed to update task status in db %s", err)
+		err = s.repo.UpdateStatus(id, "failed")
+		s.queuerepo.SetStatusCache(ctx, id, "failed")
+		if err != nil {
+			log.Printf("[Error] failed to update task status to failed in db %s", err)
+			return
+		}
+		return
+	}
+
 	s.queuerepo.SetStatusCache(ctx, id, "done")
 }

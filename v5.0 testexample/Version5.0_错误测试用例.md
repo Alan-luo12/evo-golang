@@ -80,6 +80,8 @@ PS C:\Users\罗宇轩\Desktop\go> curl.exe -s -X GET "http://localhost:8080/Gets
 
 ## Version 5.0
 
+接口错误测试
+
 PS C:\Users\罗宇轩\Desktop\go> (iwr -Uri http://localhost:8080/EchoRequestHandler -Method Post -Body '{"message":"boom","panic":true}' -ContentType "application/json" -ErrorAction SilentlyContinue).Content
 iwr : {"code":5002,"msg":"Manual Panic triggered","data":null}
 所在位置 行:1 字符: 2
@@ -101,5 +103,9 @@ PS C:\Users\罗宇轩\Desktop\go> curl.exe -X GET "http://localhost:8080/Getstat
 {"code":4041,"msg":"task not found","data":null}
 PS C:\Users\罗宇轩\Desktop\go> 
 
+redisdown的测试
+1.启动前redisdown
+
+    
+
 错误测试通过
-hey -n 5000 -c 50 "http://localhost:8080/Getstatus?id=336034243949887489"

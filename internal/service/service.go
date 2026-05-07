@@ -38,8 +38,12 @@ func (s *TaskService) SubmitTask(req model.TaskSubmit) (*model.TaskRes, error) {
 	}
 
 	ctx := context.Background()
-	s.queuerepo.Enqueue(ctx, id, req.DelayTime)
-	s.queuerepo.SetStatusCache(ctx, id, "initial")
+
+	s.queuerepo.SetStatusCache(ctx, id, "queued")
+	err = s.queuerepo.Enqueue(ctx, req.Name, id, req.DelayTime)
+	if err != nil {
+		return nil, errors.NewSystemError(5001, "failed to enqueue the task", err)
+	}
 
 	return &model.TaskRes{
 		Status: "submitted",

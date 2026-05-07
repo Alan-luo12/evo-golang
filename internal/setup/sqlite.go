@@ -19,7 +19,7 @@ func InitDB(dsn string) *sql.DB {
 			id INTEGER PRIMARY KEY ,
 			name TEXT NOT NULL,
 			result TEXT,
-			status TEXT CHECK(status IN ('pending','running','done')),
+			status TEXT CHECK(status IN ('running','done','failed')),
 			delay_time INTEGER,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

@@ -75,4 +75,8 @@ curl.exe -X GET http://localhost:8080/HealthHandler
 
 {"code":0,"msg":"Success","data":{"delay_time":150}}
 
+
+时序测试
+使用脚本
+go\测试用例\时序测试.ps1
 >>全部通过

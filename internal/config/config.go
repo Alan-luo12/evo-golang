@@ -23,7 +23,7 @@ func Load_Config() *Config {
 		DBpath = "tasks.db"
 	}
 
-	redisaddr := os.Getenv("RedisAddr")
+	redisaddr := os.Getenv("REDISADDR")
 	if redisaddr == "" {
 		redisaddr = "localhost:6379"
 	}
