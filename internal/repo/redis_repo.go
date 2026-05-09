@@ -10,16 +10,19 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+//RedisRepo结构体
 type RedisRepo struct {
-	RedisClient *redis.Client
+	redisClient *redis.Client
 }
 
+//创建RedisRepo实例
 func NewRedisRepo(client *redis.Client) *RedisRepo {
 	return &RedisRepo{
 		client,
 	}
 }
 
+//将任务加入队列
 func (r *RedisRepo) Enqueue(ctx context.Context, name string, taskid int64, delaytime int) error {
 	var msg *model.TaskRedis
 	msg = &model.TaskRedis{
@@ -33,13 +36,14 @@ func (r *RedisRepo) Enqueue(ctx context.Context, name string, taskid int64, dela
 		return err
 	}
 
-	return r.RedisClient.LPush(ctx, "task:queue:normal", data).Err()
+	return r.redisClient.LPush(ctx, "task:queue:normal", data).Err()
 }
 
+//从队列中取出任务
 func (r *RedisRepo) Dequeue(ctx context.Context) (*model.TaskRedis, error) {
 	var msg model.TaskRedis
 
-	res, err := r.RedisClient.BRPop(ctx, 5*time.Second, "task:queue:normal").Result()
+	res, err := r.redisClient.BRPop(ctx, 5*time.Second, "task:queue:normal").Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, nil
@@ -52,16 +56,18 @@ func (r *RedisRepo) Dequeue(ctx context.Context) (*model.TaskRedis, error) {
 	return &msg, err
 }
 
+//设置任务状态缓存
 func (r *RedisRepo) SetStatusCache(ctx context.Context, id int64, status string) {
 	key := fmt.Sprintf("key:task:%d", id)
 
-	r.RedisClient.Set(ctx, key, status, 5*time.Minute)
+	r.redisClient.Set(ctx, key, status, 5*time.Minute)
 }
 
+//获取任务状态缓存
 func (r *RedisRepo) GetStatusCache(ctx context.Context, id int64) (result string, err error) {
 	key := fmt.Sprintf("key:task:%d", id)
 
-	result, err = r.RedisClient.Get(ctx, key).Result()
+	result, err = r.redisClient.Get(ctx, key).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return "", nil

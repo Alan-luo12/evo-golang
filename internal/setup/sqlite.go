@@ -7,13 +7,16 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+//初始化SQLite数据库
 func InitDB(dsn string) *sql.DB {
 	var db *sql.DB
+	//打开SQLite数据库
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		log.Fatal("[Error] Failed to open database")
 	}
 
+	//创建表
 	schema := `
 	CREATE TABLE IF NOT EXISTS tasks (
 			id INTEGER PRIMARY KEY ,
@@ -26,6 +29,7 @@ func InitDB(dsn string) *sql.DB {
 	)
 	`
 
+	//执行创建表的SQL语句
 	_, err = db.Exec(schema)
 	if err != nil {
 		log.Fatalf("[Error] Failed to init database at %s", dsn)

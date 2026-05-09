@@ -9,17 +9,19 @@ import (
 	"app/pkg/response"
 )
 
+//ResponseWriterWrapper结构体
 type ResponseWriterWrapper struct {
 	http.ResponseWriter
 	status int
 }
 
+//写入响应头
 func (r *ResponseWriterWrapper) WriteHeader(status int) {
 	r.ResponseWriter.WriteHeader(status)
 	r.status = status
 }
 
-//两个middleware函数，一个捕获日志，一个捕获panic，返回5002错误
+//捕获日志
 
 func LogMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -38,9 +40,11 @@ func LogMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+//捕获panic
 func RecoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
+
 			err := recover()
 			if err != nil {
 				log.Println("[Panic Recovered]", err)

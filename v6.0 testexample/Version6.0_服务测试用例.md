@@ -80,3 +80,19 @@ curl.exe -X GET http://localhost:8080/HealthHandler
 使用脚本
 go\测试用例\时序测试.ps1
 >>全部通过
+
+## Version6.0
+
+链路完整测试通过
+
+1. 提交任务，保存 task_id
+$resp = iwr -Uri http://localhost:8080/Submit -Method Post -ContentType "application/json" -Body '{"name":"smoke","delay_time":1000}' -UseBasicParsing
+$taskId = ($resp.Content | ConvertFrom-Json).data.task_id
+Write-Host "Task ID: $taskId"
+
+2. 立即查询（应返回 queued 或 running）
+iwr "http://localhost:8080/Getstatus?id=$taskId" -UseBasicParsing
+
+3. 等待 2 秒后查询（应返回 done）
+Start-Sleep -Seconds 2
+iwr "http://localhost:8080/Getstatus?id=$taskId" -UseBasicParsing

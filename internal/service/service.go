@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"sync"
 
 	"app/internal/model"
 	"app/internal/repo"
@@ -12,19 +13,32 @@ import (
 
 type TaskService struct {
 	repo      *repo.TaskRepo
-	queuerepo *repo.RedisRepo
+	redisrepo *repo.RedisRepo
+
+	workerpool         int64
+	jobqueue           chan *model.TaskRedis
+	processconcurrency chan struct{}
+	wg                 sync.WaitGroup
 }
 
-func NewTaskService(ra *repo.TaskRepo, rb *repo.RedisRepo) *TaskService {
+// 在service层把这些配置注入
+func NewTaskService(ra *repo.TaskRepo, rb *repo.RedisRepo, workpool int64, jobqueue int64, processcurrency int64) *TaskService {
 	return &TaskService{
 		repo:      ra,
-		queuerepo: rb,
+		redisrepo: rb,
+
+		workerpool:         workpool,
+		jobqueue:           make(chan *model.TaskRedis, jobqueue),
+		processconcurrency: make(chan struct{}, processcurrency),
 	}
 }
 
+// 提交任务的接口，接受handler层传来的submittaskreq结构体，返回taskres结构体
 func (s *TaskService) SubmitTask(req model.TaskSubmit) (*model.TaskRes, error) {
 
+	//生成一个全局唯一的id，作为任务id，后续根据这个id来查询任务状态和结果
 	i, err := snowid.NextID()
+	//雪花id的格式不是int64，所以需要转换一下，转换失败就返回system error
 	id := int64(i)
 	if err != nil {
 		return nil, errors.NewSystemError(5003, "snowid error", err)
@@ -37,10 +51,14 @@ func (s *TaskService) SubmitTask(req model.TaskSubmit) (*model.TaskRes, error) {
 		return nil, errors.NewUserError(4001, "task name can not be empty", nil)
 	}
 
+	//暂时使用空白上下文，后续可以根据需要传递一些参数，比如traceid等
 	ctx := context.Background()
 
-	s.queuerepo.SetStatusCache(ctx, id, "queued")
-	err = s.queuerepo.Enqueue(ctx, req.Name, id, req.DelayTime)
+	//先把任务状态设置成queued写入redis缓存
+	s.redisrepo.SetStatusCache(ctx, id, "queued")
+
+	//入队，入队失败就返回system error
+	err = s.redisrepo.Enqueue(ctx, req.Name, id, req.DelayTime)
 	if err != nil {
 		return nil, errors.NewSystemError(5001, "failed to enqueue the task", err)
 	}
@@ -58,7 +76,9 @@ func (s *TaskService) GetTaskStatus(id int64) (*model.TaskRes, error) {
 	}
 
 	ctx := context.Background()
-	status, err := s.queuerepo.GetStatusCache(ctx, id)
+
+	//热点数据优化，缓解数据库的压力，先从redis缓存中查询，如果有就直接返回，如果没有再去数据库查询
+	status, err := s.redisrepo.GetStatusCache(ctx, id)
 	if err == nil && status != "" {
 		return &model.TaskRes{
 			ID:     id,
@@ -66,7 +86,7 @@ func (s *TaskService) GetTaskStatus(id int64) (*model.TaskRes, error) {
 		}, nil
 	}
 
-	task, err := s.repo.GetTaskStatus(id)
+	task, err := s.repo.GetTaskStatus(ctx, id)
 	if err != nil {
 
 		//区分是不是没有这一行数据的错误，否则就返回system error
@@ -75,6 +95,7 @@ func (s *TaskService) GetTaskStatus(id int64) (*model.TaskRes, error) {
 		}
 		return nil, errors.NewSystemError(5002, "[Service Error]failed to get the taskid", err)
 	}
+
 	//交给handler这个taskres就是用来和handler层交互的
 	return &model.TaskRes{
 		ID:     task.ID,

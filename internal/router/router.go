@@ -4,6 +4,7 @@ import (
 	"net/http"
 )
 
+//middleware函数类型
 type middleware func(http.Handler) http.Handler
 
 // 封装router
