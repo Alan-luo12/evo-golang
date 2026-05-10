@@ -12,6 +12,7 @@ type Config struct {
 	Port      string
 	DBPath    string
 	RedisAddr string
+	AuthToken string
 
 	RateLimitCapacity   int64
 	RateLimitRefillRate int64
@@ -40,10 +41,16 @@ func Load_Config() *Config {
 		redisaddr = "localhost:6379"
 	}
 
+	authtoken := os.Getenv("AUTHTOKEN")
+	if authtoken == "" {
+		authtoken = ""
+	}
+
 	return &Config{
 		Port:                port,
 		DBPath:              dbpath,
 		RedisAddr:           redisaddr,
+		AuthToken:           authtoken,
 		RateLimitCapacity:   Getenvint64("RATELIMITCAPACITY", 500),
 		RateLimitRefillRate: Getenvint64("RATELIMITREFILLRATE", 100),
 		WorkerPool:          Getenvint64("WORKERPOOLSIZE", 10),
@@ -58,11 +65,11 @@ func Getenvint64(key string, devalue int64) int64 {
 	if v == "" {
 		return devalue
 	}
-
+	//将字符串转换为int64
 	result, err := strconv.ParseInt(v, 10, 64)
+	//转换失败或者结果小于零就采用默认值
 	if err != nil || result <= 0 {
-		log.Printf("[warn] invalid value for %s env var, using default %d", key, devalue)
-		return devalue
+		log.Fatalf("[Fatal] invalid value for %s env var, using default %d", key, devalue)
 	}
 	return result
 }

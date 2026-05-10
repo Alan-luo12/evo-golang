@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"sync"
 
-	"app/internal/model"
-	"app/internal/repo"
-	"app/pkg/errors"
-	"app/pkg/snowid"
+	"myapp/internal/app/repo"
+	"myapp/internal/model"
+	"myapp/pkg/errors"
+	"myapp/pkg/snowid"
 )
 
 type TaskService struct {
@@ -34,7 +34,7 @@ func NewTaskService(ra *repo.TaskRepo, rb *repo.RedisRepo, workpool int64, jobqu
 }
 
 // 提交任务的接口，接受handler层传来的submittaskreq结构体，返回taskres结构体
-func (s *TaskService) SubmitTask(req model.TaskSubmit) (*model.TaskRes, error) {
+func (s *TaskService) SubmitTask(ctx context.Context, req model.TaskSubmit) (*model.TaskRes, error) {
 
 	//生成一个全局唯一的id，作为任务id，后续根据这个id来查询任务状态和结果
 	i, err := snowid.NextID()
@@ -52,16 +52,15 @@ func (s *TaskService) SubmitTask(req model.TaskSubmit) (*model.TaskRes, error) {
 	}
 
 	//暂时使用空白上下文，后续可以根据需要传递一些参数，比如traceid等
-	ctx := context.Background()
-
-	//先把任务状态设置成queued写入redis缓存
-	s.redisrepo.SetStatusCache(ctx, id, "queued")
 
 	//入队，入队失败就返回system error
-	err = s.redisrepo.Enqueue(ctx, req.Name, id, req.DelayTime)
+	err = s.redisrepo.Enqueue(ctx, id, req.Name, req.DelayTime)
 	if err != nil {
 		return nil, errors.NewSystemError(5001, "failed to enqueue the task", err)
 	}
+
+	//先把任务状态设置成queued写入redis缓存
+	s.redisrepo.SetStatusCache(ctx, id, "queued")
 
 	return &model.TaskRes{
 		Status: "submitted",
@@ -70,12 +69,10 @@ func (s *TaskService) SubmitTask(req model.TaskSubmit) (*model.TaskRes, error) {
 }
 
 // 获取任务状态的接口，返回给前端，前端根据状态来轮询，直到变成done状态
-func (s *TaskService) GetTaskStatus(id int64) (*model.TaskRes, error) {
+func (s *TaskService) GetTaskStatus(ctx context.Context, id int64) (*model.TaskRes, error) {
 	if id <= 0 {
 		return nil, errors.NewUserError(4002, "task id invalid", nil)
 	}
-
-	ctx := context.Background()
 
 	//热点数据优化，缓解数据库的压力，先从redis缓存中查询，如果有就直接返回，如果没有再去数据库查询
 	status, err := s.redisrepo.GetStatusCache(ctx, id)

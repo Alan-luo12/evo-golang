@@ -1,7 +1,6 @@
 package main
 
 import (
-	"app/internal/limit"
 	"context"
 	"log"
 	"net/http"
@@ -10,13 +9,14 @@ import (
 	"syscall"
 	"time"
 
-	"app/internal/config"
-	"app/internal/handler"
-	"app/internal/repo"
-	"app/internal/router"
-	"app/internal/service"
-	"app/internal/setup"
-	"app/pkg/snowid"
+	"myapp/internal/app/handler"
+	"myapp/internal/app/repo"
+	"myapp/internal/app/service"
+	"myapp/internal/app/setup"
+	"myapp/internal/config"
+	"myapp/internal/pkg"
+	"myapp/internal/router"
+	"myapp/pkg/snowid"
 )
 
 func main() {
@@ -25,13 +25,15 @@ func main() {
 	cfg := config.Load_Config()
 
 	//DI依赖注入，分层解耦思想,在main函数中组装各个层的组件，注入依赖，最后启动http服务和后台worker协程
-	tb := limit.NewTokenBucket(cfg.RateLimitCapacity, cfg.RateLimitRefillRate)
+	tb := pkg.NewTokenBucket(cfg.RateLimitCapacity, cfg.RateLimitRefillRate)
 	ratelimitmiddleware := router.NewRateLimitMiddleware(tb)
+	authmiddleware := router.NewAuthMiddleware(cfg.AuthToken)
 
 	db := setup.InitDB(cfg.DBPath)
 	defer db.Close()
 	redis := setup.InitResdis(cfg.RedisAddr)
 	defer redis.Close()
+
 	redisrepo := repo.NewRedisRepo(redis)
 	taskrepo := repo.NewTaskRepo(db)
 	taskservice := service.NewTaskService(taskrepo, redisrepo, cfg.WorkerPool, cfg.JobQueue, cfg.ProcessConcurrency)
@@ -39,13 +41,15 @@ func main() {
 
 	//路由注册
 	r := router.NewRouter()
-	r.Use(router.LogMiddleware, router.RecoverMiddleware)
+	r.Use("LogMiddleware", router.LogMiddleware, router.LogPriority)
+	r.Use("RecoverMiddleware", router.RecoverMiddleware, router.RecoverPriority)
+	r.Use("TraceMiddleware", router.TraceMiddleware, router.TracePriority)
 
 	r.HandleFunc("/EchoRequestHandler", h.EchoRequestHandler)
-	r.HandleFunc("/Getstatus", h.Getstatus)
 	r.HandleFunc("/HealthHandler", h.HealthHandler)
 	r.HandleFunc("/SlowHandler", h.SlowHandler)
-	r.HandleFunc("/Submit", ratelimitmiddleware(h.Submit))
+	r.HandleFunc("/Getstatus", router.ChainFunc(h.Getstatus, authmiddleware))
+	r.HandleFunc("/Submit", router.ChainFunc(h.Submit, ratelimitmiddleware, authmiddleware))
 
 	//组装http.Server
 	Service := http.Server{
@@ -57,7 +61,7 @@ func main() {
 	defer stop()
 
 	go taskservice.StartWorkers(ctx)
-	//单开协程来启动http服务，避免阻塞主线程，监听端口并返回错误	
+	//单开协程来启动http服务，避免阻塞主线程，监听端口并返回错误
 	go func() {
 
 		log.Printf("[Start] the programe running on the port \n %s", cfg.Port)

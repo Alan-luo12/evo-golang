@@ -1,0 +1,44 @@
+package router
+
+import (
+	"myapp/internal/pkg"
+	"myapp/pkg/errors"
+	"myapp/pkg/response"
+	"net/http"
+	"strings"
+)
+
+func NewAuthMiddleware(requiretoken string) middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// 检查token是否匹配
+			if requiretoken == "" {
+				ctx := pkg.WithAuthSubject(r.Context(), "auth-disabled")
+				// 换一个上下文，继续处理
+				next.ServeHTTP(w, r.WithContext(ctx))
+				// 处理完成后，返回，避免继续处理
+				return
+			}
+
+			tk := r.Header.Get("Authorization")
+			if tk == "" {
+				authHeader := r.Header.Get("Authorization")
+				const (
+					prefix = "Bearer "
+				)
+				if strings.HasPrefix(authHeader, prefix) {
+					tk = strings.TrimSpace(strings.TrimPrefix(authHeader, prefix))
+				}
+			}
+
+			if tk != requiretoken {
+				response.Error(w, errors.NewUnauthorizedError(40100, "Unauthorized", nil))
+				return
+			}
+
+			ctx := pkg.WithAuthSubject(r.Context(), "authorized")
+			next.ServeHTTP(w, r.WithContext(ctx))
+
+		})
+	}
+}

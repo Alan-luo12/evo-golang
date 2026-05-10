@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	"app/internal/model"
-	"app/internal/service"
-	"app/pkg/errors"
-	"app/pkg/response"
+	"myapp/internal/app/service"
+	"myapp/internal/model"
+	"myapp/pkg/errors"
+	"myapp/pkg/response"
 )
 
 type TaskHandler struct {
@@ -37,7 +37,7 @@ type EchoRequest struct {
 
 func (h *TaskHandler) EchoRequestHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		response.Error(w, errors.NewUserError(40051, "Method Not Allowed", nil))
+		response.Error(w, errors.NewUserError(4008, "Method Not Allowed", nil))
 		return
 	}
 	var req EchoRequest
@@ -68,7 +68,7 @@ func (h *TaskHandler) SlowHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		response.Error(w, errors.NewUserError(4003, "invalid json", nil))
+		response.Error(w, errors.NewUserError(4003, "Method Not Allowed", nil))
 		return
 	}
 
@@ -79,7 +79,7 @@ func (h *TaskHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.svc.SubmitTask(t)
+	resp, err := h.svc.SubmitTask(r.Context(), t)
 	if err != nil {
 		response.Error(w, err)
 		return
@@ -101,7 +101,7 @@ func (h *TaskHandler) Getstatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.svc.GetTaskStatus(id)
+	resp, err := h.svc.GetTaskStatus(r.Context(), id)
 	if err != nil {
 		response.Error(w, err)
 		return

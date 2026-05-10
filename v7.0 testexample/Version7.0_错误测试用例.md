@@ -244,3 +244,48 @@ hey -n 10000 -c 2000 -m POST -d '{"name":"flood"}' http://localhost:8080/Submit
 
 ## 结论
 全部通过     但是  SQLite 只读  部分通过	worker 检测到错误，但状态未更新为 failed（需修复代码）
+
+
+
+
+
+## Version 7.0
+
+
+参数校验触发业务错误码
+powershell
+# 缺失 name 字段
+iwr -Uri http://localhost:8080/Submit -Method Post -ContentType "application/json" -Body '{"delay_time":100}'
+# 预期：400 {"code":4001,"msg":"task name can not be empty"}
+
+# name 为空字符串
+iwr -Uri http://localhost:8080/Submit -Method Post -ContentType "application/json" -Body '{"name":"","delay_time":100}'
+# 预期：400 code:4001
+
+# JSON 格式错误
+iwr -Uri http://localhost:8080/Submit -Method Post -ContentType "application/json" -Body '{bad json'
+# 预期：400 {"code":4004,"msg":"Bad Request"}
+
+# 查询状态 id 为非数字
+iwr -Uri "http://localhost:8080/Getstatus?id=abc"
+# 预期：400 {"code":4006,"msg":"Bad Request"}
+
+# 查询状态 id 为负数
+iwr -Uri "http://localhost:8080/Getstatus?id=-1"
+# 预期：400 {"code":4002,"msg":"task id invalid"}
+
+# 错误 HTTP 方法
+iwr -Uri "http://localhost:8080/Getstatus?id=123" -Method Post
+# 预期：400 {"code":4005,"msg":"invalid method"}
+
+>>通过
+
+# Echo 接口主动触发 Panic
+iwr -Uri http://localhost:8080/EchoRequestHandler -Method Post -ContentType "application/json" -Body '{"message":"crash","panic":true}'
+# 预期：500 {"code":5004,"msg":"Internal Server Error"}，服务不退出，日志含 [Panic Recovered]
+
+# 提交一个长延迟任务（如 30 秒）
+iwr -Uri http://localhost:8080/Submit -Method Post -ContentType "application/json" -Body '{"name":"longtask","delay_time":30000}'
+# 立即按 Ctrl+C 停止服务
+
+>通过

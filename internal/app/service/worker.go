@@ -1,9 +1,9 @@
 package service
 
 import (
-	"app/internal/model"
 	"context"
 	"log"
+	"myapp/internal/model"
 	"time"
 )
 
@@ -62,9 +62,11 @@ func (s *TaskService) Worker(ctx context.Context) {
 
 	//无需再监听ctx因为range在jobqueue被关闭的时候会自动退出循环，dispatchloop负责关闭jobqueue
 	for msg := range s.jobqueue {
-		s.acquire()
-		s.processtask(ctx, msg.ID, msg.Name, msg.DelayTime)
-		s.release()
+		func() {
+			defer s.release()
+			s.acquire()
+			s.processtask(ctx, msg.ID, msg.Name, msg.DelayTime)
+		}()
 	}
 
 }
@@ -76,7 +78,8 @@ func (s *TaskService) acquire() {
 }
 
 func (s *TaskService) processtask(ctx context.Context, id int64, name string, delaytime int) {
-
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
 	t := model.Task{
 		ID:        id,
 		Name:      name,
@@ -84,7 +87,7 @@ func (s *TaskService) processtask(ctx context.Context, id int64, name string, de
 		DelayTime: delaytime,
 	}
 
-	_, err := s.repo.CreateTask(ctx, &t)
+	_, err := s.repo.CreateTask(ctx, id, &t)
 	if err != nil {
 		log.Printf("[Error] failed to create task in db %s", err)
 		return

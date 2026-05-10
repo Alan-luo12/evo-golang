@@ -96,3 +96,8 @@ iwr "http://localhost:8080/Getstatus?id=$taskId" -UseBasicParsing
 3. 等待 2 秒后查询（应返回 done）
 Start-Sleep -Seconds 2
 iwr "http://localhost:8080/Getstatus?id=$taskId" -UseBasicParsing
+
+
+## Verison7.0
+
+  6.0中的链路完整通过

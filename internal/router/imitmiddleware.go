@@ -1,10 +1,10 @@
 package router
 
 import (
-	"app/internal/limit"
-	"app/pkg/errors"
-	"app/pkg/response"
 	"log"
+	"myapp/internal/pkg"
+	"myapp/pkg/errors"
+	"myapp/pkg/response"
 	"net/http"
 )
 
@@ -12,8 +12,8 @@ import (
 //函数能够被http.HandlerFunc转换类型未http.HandlerFunc类型，而http.HandlerFunc类型又实现了http.Handler接口，
 //所以可以适配原来的HandleFunc函数。
 
-func NewRateLimitMiddleware(tb *limit.TokenBucket) func(http.HandlerFunc) http.HandlerFunc {
-	return func(next http.HandlerFunc) http.HandlerFunc {
+func NewRateLimitMiddleware(tb *pkg.TokenBucket) middleware {
+	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !tb.Allow() {
 				response.Error(w, errors.NewLimitExceededError(4007, "Rate Limit Exceeded", nil))

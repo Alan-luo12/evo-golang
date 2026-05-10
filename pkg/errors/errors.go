@@ -14,6 +14,10 @@ const (
 	ErrorTypeSystem
 
 	ErrorTypeLimitExceeded
+
+	ErrorTypeNotFound
+
+	ErrorTypeUnauthorized
 )
 
 // AppError结构体
@@ -42,6 +46,14 @@ func (e *AppError) HTTPStatus() int {
 	if e.Type == ErrorTypeLimitExceeded {
 		return http.StatusTooManyRequests
 	}
+	//如果错误类型是未找到错误，则返回404
+	if e.Type == ErrorTypeNotFound {
+		return http.StatusNotFound
+	}
+	//如果错误类型是未授权错误，则返回401
+	if e.Type == ErrorTypeUnauthorized {
+		return http.StatusUnauthorized
+	}		
 	//默认返回400
 	return http.StatusBadRequest
 }
@@ -75,3 +87,23 @@ func NewLimitExceededError(code int, msg string, err error) *AppError {
 		Err:  err,
 	}
 }
+
+func NewNotFoundError(code int, msg string, err error) *AppError {
+	return &AppError{
+		Type: ErrorTypeNotFound,
+		Code: code,
+		Msg:  msg,
+		Err:  err,
+	}
+}
+
+func NewUnauthorizedError(code int, msg string, err error) *AppError {
+	return &AppError{
+		Type: ErrorTypeUnauthorized,
+		Code: code,
+		Msg:  msg,
+		Err:  err,
+	}
+}		
+
+
