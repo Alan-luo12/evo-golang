@@ -6,7 +6,7 @@ import (
 )
 
 // middleware函数类型
-type middleware func(http.Handler) http.Handler
+type Middleware func(http.Handler) http.Handler
 
 // 封装router
 type Router struct {
@@ -22,7 +22,7 @@ const (
 
 type middlewareitem struct {
 	name     string
-	mw       middleware
+	mw       Middleware
 	priority int
 }
 
@@ -35,7 +35,7 @@ func NewRouter() *Router {
 
 //添加中间件的处理函数
 
-func (r *Router) Use(name string, mw middleware, priority int) {
+func (r *Router) Use(name string, mw Middleware, priority int) {
 	r.middlewareitems = append(r.middlewareitems, middlewareitem{name,
 		mw,
 		priority})
@@ -55,7 +55,7 @@ func (r *Router) HandleFunc(pattern string, handler http.HandlerFunc) {
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var handler http.Handler = r.mux
-	for i := 0; i <= len(r.middlewareitems)-1; i++ {
+	for i := len(r.middlewareitems) - 1; i >= 0; i-- {
 		handler = r.middlewareitems[i].mw(handler)
 	}
 
@@ -65,7 +65,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 //11
 
 // Chain 链式调用中间件
-func Chain(h http.Handler, middlewares ...middleware) http.Handler {
+func Chain(h http.Handler, middlewares ...Middleware) http.Handler {
 	for i := len(middlewares) - 1; i >= 0; i-- {
 		h = middlewares[i](h)
 	}
@@ -73,7 +73,7 @@ func Chain(h http.Handler, middlewares ...middleware) http.Handler {
 }
 
 // ChainFunc 链式调用中间件
-func ChainFunc(h http.HandlerFunc, middlewares ...middleware) http.HandlerFunc {
+func ChainFunc(h http.HandlerFunc, middlewares ...Middleware) http.HandlerFunc {
 	ch := Chain(h, middlewares...)
 	// 转换为.HandlerFunc类型,这里是类型断言,因为Chain返回的是http.Handler类型,而.HandlerFunc是http.Handler的实现类型
 	return ch.(http.HandlerFunc)

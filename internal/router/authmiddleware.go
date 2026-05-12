@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func NewAuthMiddleware(requiretoken string) middleware {
+func NewAuthMiddleware(requiretoken string) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// 检查token是否匹配
@@ -20,7 +20,7 @@ func NewAuthMiddleware(requiretoken string) middleware {
 				return
 			}
 
-			tk := r.Header.Get("Authorization")
+			tk := r.Header.Get("X-AUTH-TOKEN")
 			if tk == "" {
 				authHeader := r.Header.Get("Authorization")
 				const (

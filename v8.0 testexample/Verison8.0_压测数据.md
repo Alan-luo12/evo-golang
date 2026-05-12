@@ -1,4 +1,15 @@
+下面单机测试都是在单机上测试的，没有分布式部署
+
 PS C:\Users\罗宇轩\Desktop\go> # 1. 健康检查
+配置
+		RateLimitCapacity:   Getenvint64("RATELIMITCAPACITY", 500),
+		RateLimitRefillRate: Getenvint64("RATELIMITREFILLRATE", 100),
+		WorkerPool:         Getenvint64("WORKERPOOLSIZE", 10),
+		JobQueue:           Getenvint64("JOBQUEUESIZE", 100),
+		ProcessConcurrency: Getenvint64("PROCESSCONCURRENCY", 1),
+    mysql 默认
+
+
 PS C:\Users\罗宇轩\Desktop\go> hey -n 10000 -c 100 http://localhost:8080/HealthHandler
 
 Summary:
@@ -695,3 +706,66 @@ Error distribution:
 PS C:\Users\罗宇轩\Desktop\go> 
 PS C:\Users\罗宇轩\Desktop\go> # 长时间稳定性（10 分钟）
 PS C:\Users\罗宇轩\Desktop\go> hey --% -z 10m -c 200 -m POST -H "Content-Type: application/json" -d "{\"name\":\"longhaul\",\"delay_time\":500}" http://localhost:8080/Submit
+
+
+
+# 1. 健康检查
+hey -n 10000 -c 100 http://localhost:8080/HealthHandler
+
+# 2. Echo JSON
+hey --% -n 5000 -c 50 -m POST -H "Content-Type: application/json" -d "{\"message\":\"test\",\"panic\":false}" http://localhost:8080/EchoRequestHandler
+
+# 3. SlowHandler 10ms
+hey -n 10000 -c 100 "http://localhost:8080/SlowHandler?ms=10"
+
+# 4. SlowHandler 200ms
+hey -n 1000 -c 50 "http://localhost:8080/SlowHandler?ms=200"
+
+# 5. Submit 限流内基准
+hey --% -n 2000 -c 50 -m POST -H "Content-Type: application/json" -d "{\"name\":\"baseline\",\"delay_time\":1000}" http://localhost:8080/Submit
+
+# 6. 404 路由
+hey -n 5000 -c 50 http://localhost:8080/xxxapi
+
+# 7. Panic 恢复
+hey --% -n 1000 -c 20 -m POST -H "Content-Type: application/json" -d "{\"message\":\"crash\",\"panic\":true}" http://localhost:8080/EchoRequestHandler
+
+# 获取任务ID
+$resp = iwr -Uri http://localhost:8080/Submit -Method Post -ContentType "application/json" -Body '{"name":"cache_hit","delay_time":10000}' -UseBasicParsing
+$taskId = ($resp.Content | ConvertFrom-Json).data.task_id
+Write-Host "Task ID: $taskId"
+
+# 查询真实任务状态
+hey -n 5000 -c 50 "http://localhost:8080/Getstatus?id=$taskId"
+
+# 查询不存在任务ID
+hey -n 5000 -c 50 "http://localhost:8080/Getstatus?id=999999999"
+
+# 并发 100 持续30秒
+hey --% -z 30s -c 100 -m POST -H "Content-Type: application/json" -d "{\"name\":\"grad100\",\"delay_time\":100}" http://localhost:8080/Submit
+
+# 并发 200 持续30秒
+hey --% -z 30s -c 200 -m POST -H "Content-Type: application/json" -d "{\"name\":\"grad200\",\"delay_time\":100}" http://localhost:8080/Submit
+
+# 并发 500 持续30秒
+hey --% -z 30s -c 500 -m POST -H "Content-Type: application/json" -d "{\"name\":\"grad500\",\"delay_time\":100}" http://localhost:8080/Submit
+
+# 并发 1000 持续30秒
+hey --% -z 30s -c 1000 -m POST -H "Content-Type: application/json" -d "{\"name\":\"grad1000\",\"delay_time\":100}" http://localhost:8080/Submit
+
+# 超高并发短时爆破 2000并发
+hey --% -n 50000 -c 2000 -m POST -H "Content-Type: application/json" -d "{\"name\":\"brutal\",\"delay_time\":1000}" http://localhost:8080/Submit
+
+# 长时间稳定性 10分钟 200并发
+hey --% -z 10m -c 200 -m POST -H "Content-Type: application/json" -d "{\"name\":\"longhaul\",\"delay_time\":500}" http://localhost:8080/Submit
+
+
+>>接下来就是换了一个配置，从1个进程到5个进程，看下效果
+配置
+  RateLimitCapacity:   Getenvint64("RATELIMITCAPACITY", 500),
+  RateLimitRefillRate: Getenvint64("RATELIMITREFILLRATE", 100), 
+  WorkerPool:         Getenvint64("WORKERPOOLSIZE", 10),
+  JobQueue:           Getenvint64("JOBQUEUESIZE", 100),
+  ProcessConcurrency: Getenvint64("PROCESSCONCURRENCY", 5),
+  mysql 默认
+

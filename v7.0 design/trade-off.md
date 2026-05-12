@@ -1,5 +1,0 @@
-## Version 6.0 Trade-off
-
-1.NewLimitmiddleware的之下的middleware层地方舍弃了一般的的接受Handler返回Handler接口类型，采用接受Handlerfunc类型返回HandlerFunc类型，便于在注册路由的时候直接能够将普通函数传入，根据go的特性将普通函数转换为handlerfunc，舍弃了部分可读性
-
-2.多处地方不采用防御性编程，根据简洁的核心思想，增加可读性

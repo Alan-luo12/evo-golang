@@ -72,10 +72,15 @@ func TraceMiddleware(next http.Handler) http.Handler {
 		// 从请求头中获取traceID
 		traceID := r.Header.Get("X-Trace-ID")
 		if traceID == "" {
-			id, _ := snowid.NextID()
+			id, err := snowid.NextID()
+			if err != nil {
+				response.Error(w, errors.NewSystemError(50012, "Failed to generate trace ID", err))
+				return
+			}
 			// 转换为字符串
 			traceID = strconv.FormatUint(id, 10)
 		}
+		w.Header().Set("X-Trace-ID", traceID)
 		// 将traceID添加到上下文
 		ctx := pkg.WithTraceID(r.Context(), traceID)
 		next.ServeHTTP(w, r.WithContext(ctx))

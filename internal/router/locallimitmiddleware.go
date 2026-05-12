@@ -12,15 +12,16 @@ import (
 //函数能够被http.HandlerFunc转换类型未http.HandlerFunc类型，而http.HandlerFunc类型又实现了http.Handler接口，
 //所以可以适配原来的HandleFunc函数。
 
-func NewRateLimitMiddleware(tb *pkg.TokenBucket) middleware {
+func NewLocalLimitMiddleware(tb *pkg.TokenBucket) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !tb.Allow() {
+			if !tb.AllowLocal() {
 				response.Error(w, errors.NewLimitExceededError(4007, "Rate Limit Exceeded", nil))
 				log.Println("[Limit Excedeed] Rate Limit Exceeded")
 				return
 			}
 
+			w.Header().Set("X-Rate-Type", "Local")
 			next.ServeHTTP(w, r)
 		})
 	}

@@ -101,3 +101,44 @@ iwr "http://localhost:8080/Getstatus?id=$taskId" -UseBasicParsing
 ## Verison7.0
 
   6.0中的链路完整通过
+
+
+## Verison 8.0
+链路完整测试通过
+
+1. 提交任务，保存 task_id
+$resp = iwr -Uri http://localhost:8080/Submit -Method Post -ContentType "application/json" -Body '{"name":"smoke","delay_time":1000}' -UseBasicParsing
+$taskId = ($resp.Content | ConvertFrom-Json).data.task_id
+Write-Host "Task ID: $taskId"
+
+2. 立即查询（应返回 queued 或 running）
+iwr "http://localhost:8080/Getstatus?id=$taskId" -UseBasicParsing
+
+3. 等待 2 秒后查询（应返回 done）
+Start-Sleep -Seconds 2
+iwr "http://localhost:8080/Getstatus?id=$taskId" -UseBasicParsing
+
+通过
+
+# 健康检查
+curl.exe -s http://localhost:8080/HealthHandler
+# 预期: {"code":0,"msg":"Success","data":{"time":"..."}}
+
+# Echo JSON
+iwr -Uri http://localhost:8080/EchoRequestHandler -Method Post -ContentType "application/json" -Body '{"message":"hello","panic":false}'
+# 200: {"code":0,"msg":"Success","data":"hello"}
+
+# 慢接口
+curl.exe "http://localhost:8080/SlowHandler?ms=50"
+# 200, 延迟约 50ms
+
+# 404
+curl.exe http://localhost:8080/xxxapi
+# 404
+
+# Panic 恢复
+iwr -Uri http://localhost:8080/EchoRequestHandler -Method Post -ContentType "application/json" -Body '{"message":"crash","panic":true}'
+# 500, 服务不挂
+
+
+通过

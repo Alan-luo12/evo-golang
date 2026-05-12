@@ -52,15 +52,13 @@ func (s *TaskService) SubmitTask(ctx context.Context, req model.TaskSubmit) (*mo
 	}
 
 	//暂时使用空白上下文，后续可以根据需要传递一些参数，比如traceid等
-
+	//先把任务状态设置成queued写入redis缓存
+	s.redisrepo.SetStatusCache(ctx, id, "queued")
 	//入队，入队失败就返回system error
 	err = s.redisrepo.Enqueue(ctx, id, req.Name, req.DelayTime)
 	if err != nil {
 		return nil, errors.NewSystemError(5001, "failed to enqueue the task", err)
 	}
-
-	//先把任务状态设置成queued写入redis缓存
-	s.redisrepo.SetStatusCache(ctx, id, "queued")
 
 	return &model.TaskRes{
 		Status: "submitted",
@@ -88,7 +86,7 @@ func (s *TaskService) GetTaskStatus(ctx context.Context, id int64) (*model.TaskR
 
 		//区分是不是没有这一行数据的错误，否则就返回system error
 		if err == sql.ErrNoRows {
-			return nil, errors.NewUserError(4041, "task not found", err)
+			return nil, errors.NewNotFoundError(4041, "task not found", err)
 		}
 		return nil, errors.NewSystemError(5002, "[Service Error]failed to get the taskid", err)
 	}

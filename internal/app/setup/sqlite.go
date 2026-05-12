@@ -7,8 +7,8 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-//初始化SQLite数据库
-func InitDB(dsn string) *sql.DB {
+// 初始化SQLite数据库
+func InitSqliteDB(dsn string) *sql.DB {
 	var db *sql.DB
 	//打开SQLite数据库
 	db, err := sql.Open("sqlite", dsn)

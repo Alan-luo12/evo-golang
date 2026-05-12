@@ -90,6 +90,7 @@ func (s *TaskService) processtask(ctx context.Context, id int64, name string, de
 	_, err := s.repo.CreateTask(ctx, id, &t)
 	if err != nil {
 		log.Printf("[Error] failed to create task in db %s", err)
+		s.redisrepo.SetStatusCache(ctx, id, "failed")
 		return
 	}
 
