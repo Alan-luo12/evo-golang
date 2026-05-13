@@ -52,13 +52,14 @@ func main() {
 
 	tb := pkg.NewTokenBucket(cfg.RateLimitCapacity, cfg.RateLimitRefillRate)
 	locallmmd := router.NewLocalLimitMiddleware(tb)
-	distlmmd := router.NewDistLimitMiddleware(context.Background(),
+	distlmmd := router.NewDistLimitMiddleware(
 		redisrepo,
 		cfg.DistLimitMax,
 		time.Duration(cfg.DistLimitWindow)*time.Millisecond,
 		cfg.DistLimitFailOpen)
 
 	authmiddleware := router.NewAuthMiddleware(cfg.AuthToken)
+	signmiddleware := router.NewSignMiddleware(cfg.SignSecret, time.Duration(cfg.SignWindow)*time.Second, redisrepo)
 	lmmd := func() router.Middleware {
 		switch strings.ToLower(cfg.LimitModel) {
 		case "local":
@@ -78,7 +79,7 @@ func main() {
 	r.HandleFunc("/HealthHandler", h.HealthHandler)
 	r.HandleFunc("/SlowHandler", h.SlowHandler)
 	r.HandleFunc("/Getstatus", router.ChainFunc(h.Getstatus, lmmd, authmiddleware))
-	r.HandleFunc("/Submit", router.ChainFunc(h.Submit, lmmd, authmiddleware))
+	r.HandleFunc("/Submit", router.ChainFunc(h.Submit, lmmd, signmiddleware, authmiddleware))
 
 	//组装http.Server
 	Service := http.Server{

@@ -769,3 +769,736 @@ hey --% -z 10m -c 200 -m POST -H "Content-Type: application/json" -d "{\"name\":
   ProcessConcurrency: Getenvint64("PROCESSCONCURRENCY", 5),
   mysql 默认
 
+
+
+PS C:\Users\罗宇轩\Desktop\go> # 1. 健康检查
+PS C:\Users\罗宇轩\Desktop\go> hey -n 10000 -c 100 http://localhost:8080/HealthHandler
+
+Summary:
+  Total:        0.5484 secs
+  Slowest:      0.0352 secs
+  Fastest:      0.0001 secs
+  Average:      0.0054 secs
+  Requests/sec: 18236.5111
+  
+  Total data:   710000 bytes
+  Size/request: 71 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.004 [278]   |■
+  0.007 [9502]  |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.011 [62]    |
+  0.014 [54]    |
+  0.018 [3]     |
+  0.021 [0]     |
+  0.025 [19]    |
+  0.028 [25]    |
+  0.032 [35]    |
+  0.035 [21]    |
+
+
+Latency distribution:
+  10%% in 0.0047 secs
+  25%% in 0.0049 secs
+  50%% in 0.0051 secs
+  75%% in 0.0055 secs
+  90%% in 0.0060 secs
+  95%% in 0.0063 secs
+  99%% in 0.0217 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0001 secs, 0.0000 secs, 0.0248 secs
+  DNS-lookup:   0.0002 secs, 0.0000 secs, 0.0234 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0055 secs
+  resp wait:    0.0051 secs, 0.0001 secs, 0.0154 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0064 secs
+
+Status code distribution:
+  [200] 10000 responses
+
+
+
+PS C:\Users\罗宇轩\Desktop\go> 
+PS C:\Users\罗宇轩\Desktop\go> # 2. Echo JSON
+PS C:\Users\罗宇轩\Desktop\go> hey --% -n 5000 -c 50 -m POST -H "Content-Type: application/json" -d "{\"message\":\"test\",\"panic\":false}" http://localhost:8080/EchoRequestHandler
+
+Summary:
+  Total:        0.2828 secs
+  Slowest:      0.0303 secs
+  Fastest:      0.0001 secs
+  Average:      0.0028 secs
+  Requests/sec: 17683.1345
+
+  Total data:   205000 bytes
+  Size/request: 41 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.003 [4726]  |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.006 [220]   |■■
+  0.009 [3]     |
+  0.012 [0]     |
+  0.015 [0]     |
+  0.018 [0]     |
+  0.021 [0]     |
+  0.024 [4]     |
+  0.027 [37]    |
+  0.030 [9]     |
+
+
+Latency distribution:
+  10%% in 0.0023 secs
+  25%% in 0.0024 secs
+  50%% in 0.0025 secs
+  75%% in 0.0027 secs
+  90%% in 0.0030 secs
+  95%% in 0.0032 secs
+  99%% in 0.0239 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0002 secs, 0.0000 secs, 0.0244 secs
+  DNS-lookup:   0.0002 secs, 0.0000 secs, 0.0239 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0036 secs
+  resp wait:    0.0025 secs, 0.0001 secs, 0.0076 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0036 secs
+
+Status code distribution:
+  [200] 5000 responses
+
+
+
+PS C:\Users\罗宇轩\Desktop\go> 
+PS C:\Users\罗宇轩\Desktop\go> # 3. SlowHandler 10ms
+PS C:\Users\罗宇轩\Desktop\go> hey -n 10000 -c 100 "http://localhost:8080/SlowHandler?ms=10"
+
+Summary:
+  Total:        1.0844 secs
+  Slowest:      0.0394 secs
+  Fastest:      0.0097 secs
+  Average:      0.0107 secs
+  Requests/sec: 9221.6579
+
+  Total data:   520000 bytes
+  Size/request: 52 bytes
+
+Response time histogram:
+  0.010 [1]     |
+  0.013 [9895]  |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.016 [4]     |
+  0.019 [0]     |
+  0.022 [0]     |
+  0.025 [0]     |
+  0.028 [0]     |
+  0.030 [0]     |
+  0.033 [22]    |
+  0.036 [36]    |
+  0.039 [42]    |
+
+
+Latency distribution:
+  10%% in 0.0101 secs
+  25%% in 0.0102 secs
+  50%% in 0.0105 secs
+  75%% in 0.0107 secs
+  75%% in 0.0107 secs
+  90%% in 0.0109 secs
+  90%% in 0.0109 secs
+  95%% in 0.0111 secs
+  95%% in 0.0111 secs
+  99%% in 0.0309 secs
+  99%% in 0.0309 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0002 secs, 0.0000 secs, 0.0252 secs
+  DNS-lookup:   0.0002 secs, 0.0000 secs, 0.0243 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0043 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0002 secs, 0.0000 secs, 0.0252 secs
+  DNS-lookup:   0.0002 secs, 0.0000 secs, 0.0243 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0043 secs
+  resp wait:    0.0104 secs, 0.0096 secs, 0.0145 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0004 secs
+  DNS-lookup:   0.0002 secs, 0.0000 secs, 0.0243 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0043 secs
+  resp wait:    0.0104 secs, 0.0096 secs, 0.0145 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0004 secs
+  resp wait:    0.0104 secs, 0.0096 secs, 0.0145 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0004 secs
+
+
+Status code distribution:
+Status code distribution:
+  [200] 10000 responses
+  [200] 10000 responses
+
+
+
+
+
+
+PS C:\Users\罗宇轩\Desktop\go>
+PS C:\Users\罗宇轩\Desktop\go> # 4. SlowHandler 200ms
+PS C:\Users\罗宇轩\Desktop\go> hey -n 1000 -c 50 "http://localhost:8080/SlowHandler?ms=200"
+
+Summary:
+  Total:        4.0348 secs
+  Slowest:      0.2246 secs
+  Fastest:      0.1997 secs
+  Average:      0.2016 secs
+  Requests/sec: 247.8409
+
+  Total data:   53000 bytes
+  Size/request: 53 bytes
+
+Response time histogram:
+  0.200 [1]     |
+  0.202 [945]   |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.205 [4]     |
+  0.207 [0]     |
+  0.210 [0]     |
+  0.212 [0]     |
+  0.215 [0]     |
+  0.217 [0]     |
+  0.220 [0]     |
+  0.222 [9]     |
+  0.225 [41]    |■■
+
+
+Latency distribution:
+  10%% in 0.2001 secs
+  25%% in 0.2002 secs
+  50%% in 0.2005 secs
+  75%% in 0.2007 secs
+  90%% in 0.2012 secs
+  95%% in 0.2206 secs
+  99%% in 0.2241 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0011 secs, 0.0000 secs, 0.0235 secs
+  DNS-lookup:   0.0010 secs, 0.0000 secs, 0.0226 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0014 secs
+  resp wait:    0.2004 secs, 0.1995 secs, 0.2025 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0008 secs
+
+Status code distribution:
+  [200] 1000 responses
+
+
+
+PS C:\Users\罗宇轩\Desktop\go>
+PS C:\Users\罗宇轩\Desktop\go> # 5. Submit 限流内基准
+PS C:\Users\罗宇轩\Desktop\go> hey --% -n 2000 -c 50 -m POST -H "Content-Type: application/json" -d "{\"name\":\"baseline\",\"delay_time\":1000}" http://localhost:8080/Submit
+
+Summary:
+  Total:        0.3809 secs
+  Slowest:      0.1615 secs
+  Fastest:      0.0003 secs
+  Average:      0.0091 secs
+  Requests/sec: 5250.3801
+
+  Total data:   125152 bytes
+  Size/request: 62 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.016 [1931]  |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.033 [18]    |
+  0.049 [0]     |
+  0.065 [0]     |
+  0.081 [0]     |
+  0.097 [15]    |
+  0.113 [3]     |
+  0.129 [5]     |
+  0.145 [13]    |
+  0.162 [14]    |
+
+
+Latency distribution:
+  10%% in 0.0026 secs
+  25%% in 0.0040 secs
+  50%% in 0.0070 secs
+  75%% in 0.0074 secs
+  90%% in 0.0077 secs
+  95%% in 0.0089 secs
+  99%% in 0.1396 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0006 secs, 0.0000 secs, 0.0253 secs
+  DNS-lookup:   0.0005 secs, 0.0000 secs, 0.0241 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0023 secs
+  resp wait:    0.0084 secs, 0.0002 secs, 0.1369 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0005 secs
+
+Status code distribution:
+  [200] 536 responses
+  [429] 1464 responses
+
+
+
+PS C:\Users\罗宇轩\Desktop\go> 
+PS C:\Users\罗宇轩\Desktop\go> # 6. 404 路由
+PS C:\Users\罗宇轩\Desktop\go> hey -n 5000 -c 50 http://localhost:8080/xxxapi
+
+Summary:
+  Total:        0.2794 secs
+  Slowest:      0.0279 secs
+  Fastest:      0.0001 secs
+  Average:      0.0028 secs
+  Requests/sec: 17895.5480
+
+  Total data:   95000 bytes
+  Size/request: 19 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.003 [4513]  |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.006 [433]   |■■■■
+  0.008 [3]     |
+  0.011 [0]     |
+  0.014 [0]     |
+  0.017 [0]     |
+  0.020 [0]     |
+  0.022 [0]     |
+  0.025 [29]    |
+  0.028 [21]    |
+
+
+Latency distribution:
+  10%% in 0.0023 secs
+  25%% in 0.0024 secs
+  50%% in 0.0025 secs
+  75%% in 0.0027 secs
+  90%% in 0.0029 secs
+  95%% in 0.0033 secs
+  99%% in 0.0225 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0002 secs, 0.0000 secs, 0.0231 secs
+  DNS-lookup:   0.0002 secs, 0.0000 secs, 0.0229 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0031 secs
+  resp wait:    0.0024 secs, 0.0001 secs, 0.0066 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0052 secs
+
+Status code distribution:
+  [404] 5000 responses
+
+
+
+PS C:\Users\罗宇轩\Desktop\go>
+PS C:\Users\罗宇轩\Desktop\go> # 7. Panic 恢复
+PS C:\Users\罗宇轩\Desktop\go> hey --% -n 1000 -c 20 -m POST -H "Content-Type: application/json" -d "{\"message\":\"crash\",\"panic\":true}" http://localhost:8080/EchoRequestHandler
+
+Summary:
+  Total:        0.1167 secs
+  Slowest:      0.0248 secs
+  Fastest:      0.0002 secs
+  Average:      0.0023 secs
+  Requests/sec: 8568.2167
+
+  Total data:   56000 bytes
+  Size/request: 56 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.003 [913]   |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.005 [66]    |■■■
+  0.008 [0]     |
+  0.010 [0]     |
+  0.012 [0]     |
+  0.015 [0]     |
+  0.017 [0]     |
+  0.020 [0]     |
+  0.022 [11]    |
+  0.025 [9]     |
+
+
+Latency distribution:
+  10%% in 0.0009 secs
+  25%% in 0.0012 secs
+  50%% in 0.0022 secs
+  75%% in 0.0023 secs
+  90%% in 0.0025 secs
+  95%% in 0.0030 secs
+  99%% in 0.0223 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0004 secs, 0.0000 secs, 0.0213 secs
+  DNS-lookup:   0.0004 secs, 0.0000 secs, 0.0201 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0006 secs
+  resp wait:    0.0018 secs, 0.0001 secs, 0.0043 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0008 secs
+
+Status code distribution:
+  [500] 1000 responses
+
+
+
+PS C:\Users\罗宇轩\Desktop\go>
+PS C:\Users\罗宇轩\Desktop\go> # 获取任务ID
+PS C:\Users\罗宇轩\Desktop\go> $resp = iwr -Uri http://localhost:8080/Submit -Method Post -ContentType "application/json" -Body '{"name":"cache_hit","delay_time":10000}' -UseBasicParsing                                                              PS C:\Users\罗宇轩\Desktop\go> $taskId = ($resp.Content | ConvertFrom-Json).data.task_id                                    
+PS C:\Users\罗宇轩\Desktop\go> Write-Host "Task ID: $taskId"
+Task ID: 336679170501312513
+PS C:\Users\罗宇轩\Desktop\go>
+PS C:\Users\罗宇轩\Desktop\go> # 查询真实任务状态
+PS C:\Users\罗宇轩\Desktop\go> hey -n 5000 -c 50 "http://localhost:8080/Getstatus?id=$taskId"
+
+Summary:
+  Total:        0.7111 secs
+  Slowest:      0.0300 secs
+  Fastest:      0.0002 secs
+  Average:      0.0071 secs
+  Requests/sec: 7030.9317
+
+  Total data:   274524 bytes
+  Size/request: 54 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.003 [142]   |■
+  0.006 [543]   |■■■■■
+  0.009 [4236]  |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.012 [28]    |
+  0.015 [0]     |
+  0.018 [0]     |
+  0.021 [0]     |
+  0.024 [15]    |
+  0.027 [21]    |
+  0.030 [14]    |
+
+
+Latency distribution:
+  10%% in 0.0060 secs
+  25%% in 0.0067 secs
+  50%% in 0.0071 secs
+  75%% in 0.0074 secs
+  90%% in 0.0077 secs
+  95%% in 0.0079 secs
+  99%% in 0.0227 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0001 secs, 0.0000 secs, 0.0231 secs
+  DNS-lookup:   0.0002 secs, 0.0000 secs, 0.0230 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0045 secs
+  resp wait:    0.0067 secs, 0.0002 secs, 0.0104 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0047 secs
+
+Status code distribution:
+  [200] 156 responses
+  [429] 4844 responses
+
+
+
+PS C:\Users\罗宇轩\Desktop\go>
+PS C:\Users\罗宇轩\Desktop\go> # 查询不存在任务ID
+PS C:\Users\罗宇轩\Desktop\go> hey -n 5000 -c 50 "http://localhost:8080/Getstatus?id=999999999"
+
+Summary:
+  Total:        0.7135 secs
+  Slowest:      0.0328 secs
+  Fastest:      0.0002 secs
+  Average:      0.0071 secs
+  Requests/sec: 7007.5680
+
+  Total data:   269600 bytes
+  Size/request: 53 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.003 [37]    |■
+  0.007 [2197]  |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.010 [2711]  |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.013 [4]     |
+  0.017 [0]     |
+  0.020 [0]     |
+  0.023 [0]     |
+  0.026 [5]     |
+  0.030 [27]    |
+  0.033 [18]    |
+
+
+Latency distribution:
+  10%% in 0.0062 secs
+  25%% in 0.0065 secs
+  50%% in 0.0068 secs
+  75%% in 0.0072 secs
+  90%% in 0.0076 secs
+  95%% in 0.0082 secs
+  99%% in 0.0245 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0002 secs, 0.0000 secs, 0.0241 secs
+  DNS-lookup:   0.0002 secs, 0.0000 secs, 0.0219 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0018 secs
+  resp wait:    0.0068 secs, 0.0002 secs, 0.0122 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0006 secs
+
+Status code distribution:
+  [404] 80 responses
+  [429] 4920 responses
+
+
+
+PS C:\Users\罗宇轩\Desktop\go>
+PS C:\Users\罗宇轩\Desktop\go> # 并发 100 持续30秒
+PS C:\Users\罗宇轩\Desktop\go> hey --% -z 30s -c 100 -m POST -H "Content-Type: application/json" -d "{\"name\":\"grad100\",\"delay_time\":100}" http://localhost:8080/Submit
+
+Summary:
+  Total:        30.0096 secs
+  Slowest:      0.0436 secs
+  Fastest:      0.0002 secs
+  Average:      0.0134 secs
+  Requests/sec: 7437.6779
+
+  Total data:   12149164 bytes
+  Size/request: 54 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.005 [1658]  |■
+  0.009 [3487]  |■
+  0.013 [87894] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.018 [127705]        |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.022 [2313]  |■
+  0.026 [55]    |
+  0.031 [8]     |
+  0.035 [22]    |
+  0.039 [23]    |
+  0.044 [36]    |
+
+
+Latency distribution:
+  10%% in 0.0124 secs
+  25%% in 0.0128 secs
+  50%% in 0.0134 secs
+  75%% in 0.0142 secs
+  90%% in 0.0150 secs
+  95%% in 0.0156 secs
+  99%% in 0.0177 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0000 secs, 0.0000 secs, 0.0235 secs
+  DNS-lookup:   0.0000 secs, 0.0000 secs, 0.0212 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0007 secs
+  resp wait:    0.0134 secs, 0.0001 secs, 0.0256 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0007 secs
+
+Status code distribution:
+  [200] 3008 responses
+  [429] 220194 responses
+
+
+
+PS C:\Users\罗宇轩\Desktop\go> 
+PS C:\Users\罗宇轩\Desktop\go> # 并发 200 持续30秒
+PS C:\Users\罗宇轩\Desktop\go> hey --% -z 30s -c 200 -m POST -H "Content-Type: application/json" -d "{\"name\":\"grad200\",\"delay_time\":100}" http://localhost:8080/Submit
+
+Summary:
+  Total:        30.0186 secs
+  Slowest:      0.0790 secs
+  Fastest:      0.0002 secs
+  Average:      0.0273 secs
+  Requests/sec: 7326.6570
+
+  Total data:   11973056 bytes
+  Size/request: 54 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.008 [315]   |
+  0.016 [4652]  |■
+  0.024 [823]   |
+  0.032 [205372]        |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.040 [8245]  |■■
+  0.047 [377]   |
+  0.055 [39]    |
+  0.063 [34]    |
+  0.071 [52]    |
+  0.079 [26]    |
+
+
+Latency distribution:
+  10%% in 0.0254 secs
+  25%% in 0.0261 secs
+  50%% in 0.0273 secs
+  75%% in 0.0287 secs
+  90%% in 0.0302 secs
+  95%% in 0.0312 secs
+  99%% in 0.0354 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0000 secs, 0.0000 secs, 0.0278 secs
+  DNS-lookup:   0.0000 secs, 0.0000 secs, 0.0274 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0011 secs
+  resp wait:    0.0272 secs, 0.0002 secs, 0.0520 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0005 secs
+
+Status code distribution:
+  [200] 3016 responses
+  [429] 216920 responses
+
+
+
+PS C:\Users\罗宇轩\Desktop\go> 
+PS C:\Users\罗宇轩\Desktop\go> # 并发 500 持续30秒
+PS C:\Users\罗宇轩\Desktop\go> hey --% -z 30s -c 500 -m POST -H "Content-Type: application/json" -d "{\"name\":\"grad500\",\"delay_time\":100}" http://localhost:8080/Submit
+
+Summary:
+  Total:        30.0426 secs
+  Slowest:      0.9585 secs
+  Fastest:      0.0002 secs
+  Average:      0.0686 secs
+  Requests/sec: 7430.6042
+
+  Total data:   11824966 bytes
+  Size/request: 54 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.096 [216253]        |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.192 [556]   |
+  0.288 [89]    |
+  0.384 [33]    |
+  0.479 [58]    |
+  0.575 [14]    |
+  0.671 [57]    |
+  0.767 [67]    |
+  0.863 [31]    |
+  0.959 [34]    |
+
+
+Latency distribution:
+  10%% in 0.0645 secs
+  25%% in 0.0661 secs
+  50%% in 0.0687 secs
+  75%% in 0.0716 secs
+  90%% in 0.0748 secs
+  95%% in 0.0771 secs
+  99%% in 0.0885 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0000 secs, 0.0000 secs, 0.0417 secs
+  DNS-lookup:   0.0003 secs, 0.0000 secs, 0.0419 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0047 secs
+  resp wait:    0.0680 secs, 0.0001 secs, 0.9310 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0048 secs
+
+Status code distribution:
+  [200] 3017 responses
+  [429] 214176 responses
+
+Error distribution:
+  [6042]        Post "http://localhost:8080/Submit": dial tcp [::1]:8080: connectex: No connection could be made because the target machine actively refused it.
+
+PS C:\Users\罗宇轩\Desktop\go>
+PS C:\Users\罗宇轩\Desktop\go> # 并发 1000 持续30秒
+PS C:\Users\罗宇轩\Desktop\go> hey --% -z 30s -c 1000 -m POST -H "Content-Type: application/json" -d "{\"name\":\"grad1000\",\"delay_time\":100}" http://localhost:8080/Submit
+
+Summary:
+  Total:        30.1068 secs
+  Slowest:      3.1707 secs
+  Fastest:      0.0002 secs
+  Average:      0.1372 secs
+  Requests/sec: 8293.7627
+  
+  Total data:   11141346 bytes
+  Size/request: 54 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.317 [203697]        |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.634 [92]    |
+  0.951 [95]    |
+  1.268 [77]    |
+  1.585 [124]   |
+  1.902 [125]   |
+  2.220 [133]   |
+  2.537 [71]    |
+  2.854 [71]    |
+  3.171 [45]    |
+
+
+Latency distribution:
+  10%% in 0.0823 secs
+  25%% in 0.1301 secs
+  50%% in 0.1381 secs
+  75%% in 0.1463 secs
+  90%% in 0.1550 secs
+  95%% in 0.1623 secs
+  99%% in 0.1928 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0001 secs, 0.0000 secs, 0.0621 secs
+  DNS-lookup:   0.0044 secs, 0.0000 secs, 0.0664 secs
+  req write:    0.0000 secs, 0.0000 secs, 0.0223 secs
+  resp wait:    0.1282 secs, 0.0002 secs, 3.1239 secs
+  resp read:    0.0000 secs, 0.0000 secs, 0.0222 secs
+
+Status code distribution:
+  [200] 3021 responses
+  [429] 201510 responses
+
+Error distribution:
+  [45168]       Post "http://localhost:8080/Submit": dial tcp [::1]:8080: connectex: No connection could be made because the target machine actively refused it.
+
+PS C:\Users\罗宇轩\Desktop\go> 
+PS C:\Users\罗宇轩\Desktop\go> # 超高并发短时爆破 2000并发
+PS C:\Users\罗宇轩\Desktop\go> hey --% -n 50000 -c 2000 -m POST -H "Content-Type: application/json" -d "{\"name\":\"brutal\",\"delay_time\":1000}" http://localhost:8080/Submit
+
+Summary:
+  Total:        5.3511 secs
+  Slowest:      4.7552 secs
+  Fastest:      0.0003 secs
+  Average:      0.2037 secs
+  Requests/sec: 9343.9394
+  
+  Total data:   1519280 bytes
+  Size/request: 54 bytes
+
+Response time histogram:
+  0.000 [1]     |
+  0.476 [27474] |■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■
+  0.951 [49]    |
+  1.427 [8]     |
+  1.902 [49]    |
+  2.378 [51]    |
+  2.853 [31]    |
+  3.329 [18]    |
+  3.804 [11]    |
+  4.280 [84]    |
+  4.755 [24]    |
+
+
+Latency distribution:
+  10%% in 0.0381 secs
+  25%% in 0.1548 secs
+  50%% in 0.1844 secs
+  75%% in 0.2174 secs
+  90%% in 0.2437 secs
+  95%% in 0.2871 secs
+  99%% in 0.9117 secs
+
+Details (average, fastest, slowest):
+  DNS+dialup:   0.0013 secs, 0.0000 secs, 0.1825 secs
+  DNS-lookup:   0.0558 secs, 0.0000 secs, 0.3057 secs
+  req write:    0.0001 secs, 0.0000 secs, 0.0424 secs
+  resp wait:    0.0655 secs, 0.0002 secs, 4.6918 secs
+  resp read:    0.0001 secs, 0.0000 secs, 0.0507 secs
+
+Status code distribution:
+  [200] 565 responses
+  [429] 27235 responses
+
+Error distribution:
+  [22200]       Post "http://localhost:8080/Submit": dial tcp [::1]:8080: connectex: No connection could be made because the target machine actively refused it.
+
+PS C:\Users\罗宇轩\Desktop\go> 
+PS C:\Users\罗宇轩\Desktop\go> # 长时间稳定性 10分钟 200并发
+PS C:\Users\罗宇轩\Desktop\go> hey --% -z 10m -c 200 -m POST -H "Content-Type: application/json" -d "{\"name\":\"longhaul\",\"delay_time\":500}" http://localhost:8080/Submit
+PS C:\Users\罗宇轩\Desktop\go> hey --% -z 10m -c 200 -m POST -H "Content-Type: application/json" -d "{\"name\":\"longhaul\",\"delay_time\":500}" http://localhost:8080/Submit^C
+PS C:\Users\罗宇轩\Desktop\go>
+
+
+
+

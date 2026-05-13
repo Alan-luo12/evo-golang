@@ -18,6 +18,9 @@ type Config struct {
 
 	LimitModel string
 
+	SignSecret string
+	SignWindow int64
+
 	RateLimitCapacity   int64
 	RateLimitRefillRate int64
 
@@ -44,6 +47,9 @@ func Load_Config() *Config {
 		RedisAddr:  Getenvstring("REDISADDR", "localhost:6379"),
 		AuthToken:  Getenvstring("AUTHTOKEN", ""),
 		MachineID:  uint16(Getenvint64("MACHINEID", 1)), //默认值为1，最大值为1023
+
+		SignSecret: Getenvstring("SIGNSECRET", "test-secret"),
+		SignWindow: Getenvint64("SIGNWINDOWSEC", 60),
 
 		LimitModel: Getenvstring("MODEL", "dist"),
 

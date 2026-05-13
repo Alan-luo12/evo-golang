@@ -1,7 +1,6 @@
 package router
 
 import (
-	"context"
 	"fmt"
 	"myapp/internal/app/repo"
 	"myapp/pkg/errors"
@@ -11,7 +10,7 @@ import (
 )
 
 // NewDistLimitMiddleware 新的dist limit中间件
-func NewDistLimitMiddleware(ctx context.Context, repo *repo.RedisRepo, max int64, window time.Duration, failopen bool) Middleware {
+func NewDistLimitMiddleware(repo *repo.RedisRepo, max int64, window time.Duration, failopen bool) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			name := r.URL.Path
@@ -30,7 +29,7 @@ func NewDistLimitMiddleware(ctx context.Context, repo *repo.RedisRepo, max int64
 			key := fmt.Sprintf("ratelimit:%s:%d", name, bucketid)
 
 			//检查是否超过限制
-			res, err := repo.AllowDist(ctx, key, window, max)
+			res, err := repo.AllowDist(r.Context(), key, window, max)
 
 			if err != nil {
 				if failopen {

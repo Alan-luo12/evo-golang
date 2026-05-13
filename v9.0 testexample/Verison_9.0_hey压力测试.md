@@ -347,3 +347,48 @@ QPS	9344
 平均延迟	203.7 ms
 P99 延迟	911.7 ms
 数据库错误（500）	0
+
+## Version 9.0
+
+//静态请求没办法动态生成nonce先这样吧
+
+cd C:\Users\罗宇轩\Desktop\go\cmd\server
+
+# 限流配置 + 签名配置
+$env:PORT='8080'
+$env:MACHINEID='1'
+$env:SIGNSECRET='test-secret'
+$env:SIGNWINDOWSEC='60'
+$env:REDISADDR='localhost:6379'
+$env:LimitModel='dist'
+$env:DISTLIMITMAX='100'
+$env:DISTLIMITWINDOWMS='1000'
+
+# Worker 配置
+$env:RateLimitCapacity='500'
+$env:RateLimitRefillRate='100'
+$env:WorkerPool='10'
+$env:JobQueue='100'
+$env:ProcessConcurrency='5'  # 或 '1' 对比测试
+
+go run main.go
+
+
+
+接口	配置	QPS	成功率	与 V8 对比
+健康检查	100并发/10000请求	~17,700	100%	✅ 略低于 V8 (24k)
+Echo JSON	50并发/5000请求	~18,350	100%	✅ 略低于 V8 (22k)
+SlowHandler 10ms	100并发/10000请求	~9,190	100%	✅ 持平
+SlowHandler 200ms	50并发/1000请求	~247	100%	✅ 持平
+404 路由	50并发/5000请求	~18,400	100%	✅ 持平
+Panic 恢复	20并发/1000请求	~8,500	100% 500	✅ 持平
+结论：无签名接口性能与 V8 基本持平，签名中间件不影响这些接口。
+
+二、Submit 接口压测（固定签名 - 防重放生效）
+并发	总请求	QPS	200	409	429	错误
+50	2,000	~9,218	0	200	1,800	0
+100	~293,000	~9,769	0	3,100	290,055	0
+200	~304,000	~10,138	0	3,000	301,292	0
+500	~294,000	~9,800	0	3,000	287,702	3,632
+1000	~270,000	~8,993	0	3,017	250,383	17,143
+2000	50,000	~8,057	0	700	41,380	7,920

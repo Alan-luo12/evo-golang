@@ -81,13 +81,20 @@ func (r *RedisRepo) GetStatusCache(ctx context.Context, id int64) (result string
 
 }
 
+// 11
+// 11
+func (r *RedisRepo) UseNonceOnce(ctx context.Context, nonce string, ttl time.Duration) (bool, error) {
+	key := fmt.Sprintf("security:nounce:%s", nonce)
+	return r.redisClient.SetNX(ctx, key, "1", ttl).Result()
+}
+
 var distlimitscript = redis.NewScript(`
 	local current = redis.call("INCR",KEYS[1])
 	if current == 1 then
 		redis.call("PEXPIRE",KEYS[1],ARGV[1])
 	end
 
-	local ttl = redis.call("TTL",KEYS[1])
+	local ttl = redis.call("PTTL",KEYS[1])
 	
 	if current > tonumber(ARGV[2]) then
 		return {0, current, ttl}

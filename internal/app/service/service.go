@@ -51,14 +51,13 @@ func (s *TaskService) SubmitTask(ctx context.Context, req model.TaskSubmit) (*mo
 		return nil, errors.NewUserError(4001, "task name can not be empty", nil)
 	}
 
-	//暂时使用空白上下文，后续可以根据需要传递一些参数，比如traceid等
-	//先把任务状态设置成queued写入redis缓存
-	s.redisrepo.SetStatusCache(ctx, id, "queued")
 	//入队，入队失败就返回system error
 	err = s.redisrepo.Enqueue(ctx, id, req.Name, req.DelayTime)
 	if err != nil {
 		return nil, errors.NewSystemError(5001, "failed to enqueue the task", err)
 	}
+	//把任务状态设置成queued写入redis缓存
+	s.redisrepo.SetStatusCache(ctx, id, "queued")
 
 	return &model.TaskRes{
 		Status: "submitted",
@@ -90,6 +89,7 @@ func (s *TaskService) GetTaskStatus(ctx context.Context, id int64) (*model.TaskR
 		}
 		return nil, errors.NewSystemError(5002, "[Service Error]failed to get the taskid", err)
 	}
+	s.redisrepo.SetStatusCache(ctx, id, task.Status)
 
 	//交给handler这个taskres就是用来和handler层交互的
 	return &model.TaskRes{

@@ -14,7 +14,6 @@ const (
 // 设置traceid
 func WithTraceID(ctx context.Context, traceid string) context.Context {
 	return context.WithValue(ctx, TraceIDKey, traceid)
-
 }
 
 // 获取traceid

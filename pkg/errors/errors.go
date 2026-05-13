@@ -18,6 +18,8 @@ const (
 	ErrorTypeNotFound
 
 	ErrorTypeUnauthorized
+
+	ErrorTypeConflict
 )
 
 // AppError结构体
@@ -42,7 +44,7 @@ func (e *AppError) HTTPStatus() int {
 	if e.Type == ErrorTypeSystem {
 		return http.StatusInternalServerError
 	}
-	//如果错误类型是限流错误，则返回429	
+	//如果错误类型是限流错误，则返回429
 	if e.Type == ErrorTypeLimitExceeded {
 		return http.StatusTooManyRequests
 	}
@@ -53,7 +55,11 @@ func (e *AppError) HTTPStatus() int {
 	//如果错误类型是未授权错误，则返回401
 	if e.Type == ErrorTypeUnauthorized {
 		return http.StatusUnauthorized
-	}		
+	}
+
+	if e.Type == ErrorTypeConflict {
+		return http.StatusConflict
+	}
 	//默认返回400
 	return http.StatusBadRequest
 }
@@ -88,6 +94,7 @@ func NewLimitExceededError(code int, msg string, err error) *AppError {
 	}
 }
 
+// 创建未找到错误
 func NewNotFoundError(code int, msg string, err error) *AppError {
 	return &AppError{
 		Type: ErrorTypeNotFound,
@@ -97,6 +104,7 @@ func NewNotFoundError(code int, msg string, err error) *AppError {
 	}
 }
 
+// 创建未授权错误
 func NewUnauthorizedError(code int, msg string, err error) *AppError {
 	return &AppError{
 		Type: ErrorTypeUnauthorized,
@@ -104,6 +112,13 @@ func NewUnauthorizedError(code int, msg string, err error) *AppError {
 		Msg:  msg,
 		Err:  err,
 	}
-}		
+}
 
-
+func NewConflictError(code int, msg string, err error) *AppError {
+	return &AppError{
+		Type: ErrorTypeConflict,
+		Code: code,
+		Msg:  msg,
+		Err:  err,
+	}
+}

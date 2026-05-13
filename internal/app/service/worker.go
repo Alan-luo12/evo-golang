@@ -50,7 +50,6 @@ func (s *TaskService) dispatchloop(ctx context.Context) {
 			return
 		}
 	}
-
 }
 
 //消费队列开死循环，监听队列中是否有新的任务，如果有就取出任务，执行任务，执行完后更新任务状态，继续监听队列
