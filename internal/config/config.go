@@ -35,6 +35,11 @@ type Config struct {
 	MaxConns        int64
 	MaxIdleConns    int64
 	ConnMaxLifetime int64
+
+	PprofEnabled         bool
+	PprofAddr            string
+	BlockProfileRate     int64
+	MutexProfileFraction int64
 }
 
 // 加载配置文件
@@ -68,6 +73,11 @@ func Load_Config() *Config {
 		MaxConns:        Getenvint64("MAXCONNS", 100),
 		MaxIdleConns:    Getenvint64("MAXIDLECONNS", 100),
 		ConnMaxLifetime: Getenvint64("CONNMAXLIFETIME", 5),
+
+		PprofEnabled:         Getenvbool("PPROFENABLED", false),
+		PprofAddr:            Getenvstring("PPROFADDR", "localhost:6060"),
+		BlockProfileRate:     Getenvint64("PPROFPROFERATE", 1),
+		MutexProfileFraction: Getenvint64("MUTPROFERATE", 1),
 	}
 }
 
