@@ -12,6 +12,7 @@
 - **异步任务调度**：使用 Worker Pool 消费模型，请求立即返回雪花 ID，任务通过 Redis 队列异步下发，MySQL 最终落盘，解耦高并发写入瓶颈。
 - **分布式追溯**：使用 Sonyflake 生成全局唯一的 Task ID 与 Trace ID。
 - **优雅启停**：监听系统信号，支持平滑退出 (`Graceful Shutdown`)，确保 Worker 池中的任务安全执行完毕。
+- **性能剖析**：内置 pprof，支持 CPU、内存、Goroutine 实时分析。
 
 ## 🏗️ 系统架构
 
@@ -47,6 +48,7 @@
 | `/HealthHandler` | GET | 服务健康检查 | 基础中间件 |
 | `/EchoRequestHandler`| POST | 测试序列化吞吐及 Panic 捕获 | 基础中间件 |
 | `/SlowHandler` | GET | 测试慢请求与高延迟阻塞处理 | 基础中间件 |
+| `/debug/pprof/*` | GET | 性能分析（CPU/内存/Goroutine） | 无 |
 
 ## ⚙️ 快速启动
 
@@ -74,8 +76,34 @@ $env:WORKERPOOLSIZE='10'
 $env:JOBQUEUESIZE='100'
 $env:PROCESSCONCURRENCY='5'
 
+# 5. pprof 性能分析配置
+$env:PPROF_ENABLED='true'         # 启用 pprof
+$env:PPROF_ADDR='localhost:6060'  # pprof 监听地址
+
 # 5. 启动服务
 go run main.go
+```
+
+## 📊 性能剖析 (pprof)
+
+服务内置 pprof，用于实时性能观测。
+
+### 访问地址
+
+启动服务后访问：`http://localhost:6060/debug/pprof/`
+
+### 常用命令
+
+```bash
+# CPU 分析（采样 30 秒）
+go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
+
+# 内存分析
+go tool pprof http://localhost:6060/debug/pprof/heap
+
+# Web UI 火焰图
+go tool pprof -http=:8081 http://localhost:6060/debug/pprof/profile?seconds=30
+```
 ```
 
 ## 🔐 客户端调用规范 (以 `/Submit` 为例)

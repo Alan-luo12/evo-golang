@@ -371,3 +371,8 @@ PS C:\Users\罗宇轩\Desktop\go>
 Nonce 重用（第二次）	409	409	✅
 提交任务 → 查询状态	200 → running → done	全部成功	✅
 压力测试（10000 请求）	系统稳定	QPS ~8980	✅
+
+## pprof 测试入口
+http://localhost:6060/debug/pprof/
+
+正常访问pprof服务

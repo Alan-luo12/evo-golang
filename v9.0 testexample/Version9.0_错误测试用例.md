@@ -294,3 +294,186 @@ iwr -Uri http://localhost:8080/Submit -Method Post -ContentType "application/jso
 ## Version 8.0
 
 和version7.0保持一致，没有新增错误码测试，通过
+
+
+## Version 9.0
+前置准备：定义签名函数（执行一次）
+powershell
+function Get-UnixTimestamp { 
+    $epoch = Get-Date -Year 1970 -Month 1 -Day 1 -Hour 0 -Minute 0 -Second 0
+    [int64]([DateTime]::UtcNow - $epoch).TotalSeconds
+}
+function New-Nonce {
+    $bytes = [byte[]]::new(16)
+    [Security.Cryptography.RNGCryptoServiceProvider]::Create().GetBytes($bytes)
+    -join ($bytes | ForEach-Object { $_.ToString("x2") })
+}
+function Sign-HMAC256 {
+    param($method, $path, $timestamp, $nonce, $body, $secret="test-secret")
+    $payload = "$method$path$timestamp$nonce$body"
+    $hmac = New-Object System.Security.Cryptography.HMACSHA256
+    $hmac.Key = [Text.Encoding]::UTF8.GetBytes($secret)
+    $hash = $hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($payload))
+    -join ($hash | ForEach-Object { $_.ToString("x2") })
+}
+function Invoke-SignedRequest {
+    param($Uri, $Method="POST", $Body, $ContentType="application/json")
+    $ts = Get-UnixTimestamp
+    $nonce = New-Nonce
+    $sign = Sign-HMAC256 $Method "/Submit" $ts $nonce $Body
+    $headers = @{
+        "Content-Type" = $ContentType
+        "X-Sign" = $sign
+        "X-TimeStamp" = "$ts"
+        "X-Nonce" = $nonce
+    }
+    try {
+        $resp = Invoke-WebRequest -Uri $Uri -Method $Method -Headers $headers -Body $Body -UseBasicParsing
+        return $resp
+    } catch {
+        return $_.Exception.Response
+    }
+}
+一、业务错误测试（需签名）
+1. 缺失 name 字段 → 4001
+powershell
+$resp = Invoke-SignedRequest -Uri "http://localhost:8080/Submit" -Body '{"delay_time":100}'
+Write-Host "StatusCode: $($resp.StatusCode)"
+if ($resp.Content) { Write-Host "Response: $($resp.Content)" }
+2. name 为空字符串 → 4001
+powershell
+$resp = Invoke-SignedRequest -Uri "http://localhost:8080/Submit" -Body '{"name":"","delay_time":100}'
+Write-Host "StatusCode: $($resp.StatusCode)"
+if ($resp.Content) { Write-Host "Response: $($resp.Content)" }
+3. JSON 格式错误 → 4004
+powershell
+$resp = Invoke-SignedRequest -Uri "http://localhost:8080/Submit" -Body '{bad json'
+Write-Host "StatusCode: $($resp.StatusCode)"
+if ($resp.Content) { Write-Host "Response: $($resp.Content)" }
+二、Getstatus 接口测试（无签名，但需要合法 ID）
+4. 先提交一个正常任务获取 ID
+powershell
+$resp = Invoke-SignedRequest -Uri "http://localhost:8080/Submit" -Body '{"name":"get_test","delay_time":100}'
+$taskId = ($resp.Content | ConvertFrom-Json).data.task_id
+Write-Host "Task ID: $taskId"
+5. 查询状态 id 为非数字 → 4006
+powershell
+Invoke-WebRequest -Uri "http://localhost:8080/Getstatus?id=abc" -UseBasicParsing
+6. 查询状态 id 为负数 → 4002
+powershell
+Invoke-WebRequest -Uri "http://localhost:8080/Getstatus?id=-1" -UseBasicParsing
+7. 错误 HTTP 方法 (POST) → 4005
+powershell
+Invoke-WebRequest -Uri "http://localhost:8080/Getstatus?id=$taskId" -Method POST -UseBasicParsing
+8. 正常查询（应成功）
+powershell
+Invoke-WebRequest -Uri "http://localhost:8080/Getstatus?id=$taskId" -UseBasicParsing | Select-Object -ExpandProperty Content
+三、Echo 接口测试（无需签名）
+9. Echo 接口主动触发 Panic → 500，服务不崩溃
+powershell
+Invoke-WebRequest -Uri http://localhost:8080/EchoRequestHandler -Method Post -ContentType "application/json" -Body '{"message":"crash","panic":true}' -UseBasicParsing -ErrorAction SilentlyContinue
+# 观察服务端日志应有 [Panic Recovered]
+10. Echo 正常请求（无需签名）
+powershell
+Invoke-WebRequest -Uri http://localhost:8080/EchoRequestHandler -Method Post -ContentType "application/json" -Body '{"message":"hello","panic":false}' -UseBasicParsing | Select-Object -ExpandProperty Content
+四、健康检查（无需签名）
+11. 健康检查
+powershell
+Invoke-WebRequest -Uri http://localhost:8080/HealthHandler -UseBasicParsing | Select-Object -ExpandProperty Content
+五、长延迟任务 + 优雅关闭测试
+12. 提交一个长延迟任务（30 秒）
+powershell
+$resp = Invoke-SignedRequest -Uri "http://localhost:8080/Submit" -Body '{"name":"longtask","delay_time":30000}'
+$longTaskId = ($resp.Content | ConvertFrom-Json).data.task_id
+Write-Host "Long Task ID: $longTaskId"
+Write-Host "任务已提交，将在 30 秒后完成"
+13. 查询长任务状态
+powershell
+# 立即查询（应 queued 或 running）
+Invoke-WebRequest -Uri "http://localhost:8080/Getstatus?id=$longTaskId" -UseBasicParsing | Select-Object -ExpandProperty Content
+14. 优雅关闭测试（手动执行）
+powershell
+Write-Host "请在服务端按 Ctrl+C 停止服务，观察 worker 是否完成当前任务"
+Write-Host "然后重新启动服务继续测试"
+六、签名错误注入测试
+15. 缺少 X-Sign 头 → 4091
+powershell
+$ts = Get-UnixTimestamp
+$nonce = New-Nonce
+$body = '{"name":"test","delay_time":100}'
+Invoke-WebRequest -Uri http://localhost:8080/Submit -Method POST -Headers @{"Content-Type"="application/json";"X-TimeStamp"="$ts";"X-Nonce"=$nonce} -Body $body -UseBasicParsing -ErrorAction SilentlyContinue
+16. 错误签名 → 4096
+powershell
+$ts = Get-UnixTimestamp
+$nonce = New-Nonce
+$body = '{"name":"test","delay_time":100}'
+Invoke-WebRequest -Uri http://localhost:8080/Submit -Method POST -Headers @{"Content-Type"="application/json";"X-Sign"="wrongsign";"X-TimeStamp"="$ts";"X-Nonce"=$nonce} -Body $body -UseBasicParsing -ErrorAction SilentlyContinue
+17. Nonce 重用（防重放）→ 4098
+powershell
+$ts = Get-UnixTimestamp
+$nonce = New-Nonce
+$body = '{"name":"replay_test","delay_time":100}'
+$sign = Sign-HMAC256 "POST" "/Submit" $ts $nonce $body
+
+# 第一次（应成功）
+Invoke-WebRequest -Uri http://localhost:8080/Submit -Method POST -Headers @{"Content-Type"="application/json";"X-Sign"=$sign;"X-TimeStamp"="$ts";"X-Nonce"=$nonce} -Body $body -UseBasicParsing > $null
+
+# 第二次（相同 nonce，应 4098）
+try {
+    Invoke-WebRequest -Uri http://localhost:8080/Submit -Method POST -Headers @{"Content-Type"="application/json";"X-Sign"=$sign;"X-TimeStamp"="$ts";"X-Nonce"=$nonce} -Body $body -UseBasicParsing
+} catch {
+    Write-Host "StatusCode: $($_.Exception.Response.StatusCode.value__)"
+    $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+    Write-Host "Response: $($reader.ReadToEnd())"
+}
+18. 时间戳过期（2分钟前）→ 4094
+powershell
+$old_ts = [int64]((Get-Date).AddMinutes(-2) - (Get-Date -Year 1970 -Month 1 -Day 1))
+$nonce = New-Nonce
+$body = '{"name":"old_test","delay_time":100}'
+$sign = Sign-HMAC256 "POST" "/Submit" $old_ts $nonce $body
+try {
+    Invoke-WebRequest -Uri http://localhost:8080/Submit -Method POST -Headers @{"Content-Type"="application/json";"X-Sign"=$sign;"X-TimeStamp"="$old_ts";"X-Nonce"=$nonce} -Body $body -UseBasicParsing
+} catch {
+    Write-Host "StatusCode: $($_.Exception.Response.StatusCode.value__)"
+    $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+    Write-Host "Response: $($reader.ReadToEnd())"
+}
+七、完整业务流程测试（提交 → 轮询 → 完成）
+powershell
+# 1. 提交任务
+Write-Host "=== 提交任务 ===" -ForegroundColor Cyan
+$resp = Invoke-SignedRequest -Uri "http://localhost:8080/Submit" -Body '{"name":"e2e_test","delay_time":3000}'
+$taskId = ($resp.Content | ConvertFrom-Json).data.task_id
+Write-Host "Task ID: $taskId"
+
+# 2. 轮询状态直到完成
+Write-Host "`n=== 轮询状态 ===" -ForegroundColor Cyan
+for ($i=1; $i -le 10; $i++) {
+    Start-Sleep -Seconds 1
+    $statusResp = Invoke-WebRequest -Uri "http://localhost:8080/Getstatus?id=$taskId" -UseBasicParsing
+    $status = ($statusResp.Content | ConvertFrom-Json).data.status
+    Write-Host "第 $i 秒: $status"
+    if ($status -eq "done") { break }
+}
+
+Write-Host "`n=== 最终结果 ===" -ForegroundColor Green
+$statusResp.Content
+
+
+📊 测试结果汇总
+测试项	预期	实际	状态
+缺失 name 字段	4001 (BadRequest)	✅ BadRequest	✅
+name 为空字符串	4001	✅ BadRequest	✅
+JSON 格式错误	4004 (BadRequest)	✅ BadRequest	✅
+查询 id=abc	4006	✅ 4006	✅
+查询 id=-1	4002	✅ 4002	✅
+错误 HTTP 方法 (POST)	4005	✅ 4005	✅
+正常查询状态	200 + done	✅ 200 + done	✅
+Echo Panic 触发	500 + 服务不崩溃	✅ 500 + 服务正常	✅
+Echo 正常请求	200 + "hello"	✅ 200 + "hello"	✅
+缺少 X-Sign	4091	✅ 4091	✅
+错误签名	4096	✅ 4096	✅
+Nonce 重用（第二次）	4098	✅ 409	✅
+完整业务流程（提交→轮询）	200 → running → done	✅ 3 秒完成	✅
+
