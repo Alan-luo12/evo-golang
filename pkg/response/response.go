@@ -1,9 +1,9 @@
 package response
 
 import (
+	"Lin/pkg/errors"
 	"encoding/json"
 	"log"
-	"myapp/pkg/errors"
 	"net/http"
 )
 

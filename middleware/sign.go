@@ -1,18 +1,17 @@
-package router
+package middlewares
 
 import (
+	"Lin/pkg/errors"
+	"Lin/pkg/response"
+	"Lin/security"
 	"bytes"
 	"io"
-	"myapp/internal/app/repo"
-	"myapp/internal/pkg"
-	"myapp/pkg/errors"
-	"myapp/pkg/response"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-func NewSignMiddleware(secret string, window time.Duration, redisrepo *repo.RedisRepo) Middleware {
+func SignMiddleware(secret string, window time.Duration, noncestore security.NonceStore) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			sign := r.Header.Get("X-Sign")
@@ -29,15 +28,15 @@ func NewSignMiddleware(secret string, window time.Duration, redisrepo *repo.Redi
 				response.Error(w, errors.NewConflictError(4092, "TimeStamp is invalid", nil))
 				return
 			}
-			ttl := pkg.TimeStampTTL(time.Now(), ts, window)
+			ttl := security.TimeStampTTL(time.Now(), ts, window)
 
 			// 验证Nonce是否有效
-			if !pkg.ValidNonce(nonce) {
+			if !security.ValidNonce(nonce) {
 				response.Error(w, errors.NewConflictError(4093, "Nonce is invalid", nil))
 				return
 			}
 			// 验证TimeStamp是否在窗口内
-			if !pkg.TimeStampInWindow(time.Now(), ts, window) {
+			if !security.TimeStampInWindow(time.Now(), ts, window) {
 				response.Error(w, errors.NewConflictError(4094, "TimeStamp is not in window", nil))
 				return
 			}
@@ -49,14 +48,14 @@ func NewSignMiddleware(secret string, window time.Duration, redisrepo *repo.Redi
 				return
 			}
 			r.Body = io.NopCloser(bytes.NewReader(body))
-			payload := pkg.BuildSignPayload(r.Method, r.URL.Path, ts, nonce, body)
-			if !pkg.VertifySign(payload, secret, sign) {
+			payload := security.BuildSignPayload(r.Method, r.URL.Path, ts, nonce, body)
+			if !security.VertifySign(payload, secret, sign) {
 				response.Error(w, errors.NewConflictError(4096, "Sign is invalid", nil))
 				return
 			}
 
 			// 验证Nonce是否被使用过
-			success, err := redisrepo.UseNonceOnce(r.Context(), nonce, ttl)
+			success, err := noncestore.UseNonceOnce(r.Context(), nonce, ttl)
 			if err != nil {
 				response.Error(w, errors.NewConflictError(4097, "UseNonceOnce failed", err))
 				return

@@ -1,4 +1,4 @@
-package pkg
+package security
 
 import (
 	"crypto/hmac"
@@ -40,7 +40,7 @@ func VertifySign(payload string, secret string, sign string) bool {
 	return hmac.Equal([]byte(expected), []byte(strings.TrimSpace(sign)))
 }
 
-// 通过Unix方法把整数timestamp转湖岸为time.TIme进行计算diff，比对是否在时间窗口之内，作用是防止请求端拿着过期的timestamp进行攻击
+// 通过Unix方法把整数timestamp转换为time.Time进行计算diff，比对是否在时间窗口之内，作用是防止请求端拿着过期的timestamp进行攻击
 func TimeStampInWindow(now time.Time, ts int64, window time.Duration) bool {
 	timestamp := time.Unix(ts, 0)
 	diff := now.Sub(timestamp)

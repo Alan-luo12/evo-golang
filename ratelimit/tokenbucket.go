@@ -1,4 +1,4 @@
-package pkg
+package ratelimit
 
 import (
 	"sync"
@@ -26,7 +26,7 @@ func NewTokenBucket(capacity int64, refillrate int64) *TokenBucket {
 }
 
 // 检查是否有足够的令牌，如果有则消耗一个令牌并返回true，否则返回false
-func (tb *TokenBucket) AllowLocal() bool {
+func (tb *TokenBucket) Allow() bool {
 	tb.mu.Lock()
 	defer tb.mu.Unlock()
 

@@ -1,127 +1,181 @@
-# Go 基于net/http原生库上层封装的web框架 (V9.0)
+v10 进行重构 从“异步任务服务”变成了一个真正可复用的轻量 Web 框架
+快速开始
+GO
+package main
+import (
+	"Lin"
+	"Lin/middlewares"
+	"Lin/pkg/response"
+	"Lin/pkg/snowid"
+	"Lin/ratelimit"
+	"net/http"
+)
+func main() {
+	// TraceMiddleware 依赖 snowid
+	snowid.Init(1)
+	app := Lin.NewRouter()
+	tb := ratelimit.NewTokenBucket(100, 10)
+	app.Use("recover", middlewares.RecoverMiddleware(), Lin.RecoverPriority)
+	app.Use("trace", middlewares.TraceMiddleware(), Lin.TracePriority)
+	app.Use("log", middlewares.LogMiddleware, Lin.LogPriority)
+	app.Use("auth", middlewares.AuthMiddleware("your-token"), 30)
+	app.Use("limit", middlewares.LocalLimitMiddleware(tb), 40)
+	app.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		response.Success(w, map[string]any{
+			"message": "pong",
+			"traceId": Lin.GetTraceID(r.Context()),
+			"auth":    Lin.GetAuthSubject(r.Context()),
+		})
+	})
+	if err := app.Run(":8080"); err != nil {
+		panic(err)
+	}
+}
+统一响应
+成功响应：
 
-一个基于 Go 构建的高性能、高并发分布式异步任务处理 API 服务。采用典型的 Clean Architecture，内置完整的安全防御机制（防重放签名、分布式限流）、异步 Worker 池调度，以及平滑重启能力。
+JSON
+{
+  "code": 0,
+  "msg": "Success",
+  "data": {}
+}
+错误响应：
 
-## 🚀 核心特性
+JSON
+{
+  "code": 40100,
+  "msg": "Unauthorized",
+  "data": null
+}
+错误处理
+GO
+response.Error(w, errors.NewUserError(4001, "invalid params", err))
+response.Error(w, errors.NewSystemError(5001, "server error", err))
+response.Error(w, errors.NewUnauthorizedError(40100, "Unauthorized", nil))
+response.Error(w, errors.NewLimitExceededError(4007, "Rate Limit Exceeded", nil))
+错误类型会自动映射 HTTP 状态码：
 
-- **自定义高性能路由**：支持洋葱模型中间件链路，优先级严格控制（`Panic 恢复 → 链路追踪 TraceID → 接口日志 → 限流 → 签名校验 → 鉴权`）。
-- **高可用安全防御**：
-  - 基于 `HMAC-SHA256` 的严格接口签名验证 (`X-Sign`, `X-TimeStamp`, `X-Nonce`)。
-  - 基于 `Redis SETNX` 的分布式 Nonce 防重放攻击拦截。
-- **双模限流机制**：支持本地令牌桶（Local）和基于 Redis Lua 脚本的分布式限流（Dist），支持故障降级 (`FailOpen`)。
-- **异步任务调度**：使用 Worker Pool 消费模型，请求立即返回雪花 ID，任务通过 Redis 队列异步下发，MySQL 最终落盘，解耦高并发写入瓶颈。
-- **分布式追溯**：使用 Sonyflake 生成全局唯一的 Task ID 与 Trace ID。
-- **优雅启停**：监听系统信号，支持平滑退出 (`Graceful Shutdown`)，确保 Worker 池中的任务安全执行完毕。
-- **性能剖析**：内置 pprof，支持 CPU、内存、Goroutine 实时分析。
+ErrorType	HTTP Status
+User	400
+System	500
+LimitExceeded	429
+NotFound	404
+Unauthorized	401
+Conflict	409
+中间件
+Recover
+捕获 panic，返回统一 500 响应。
 
-## 🏗️ 系统架构
+GO
+app.Use("recover", middlewares.RecoverMiddleware(), Lin.RecoverPriority)
+Trace
+自动生成或透传 X-Trace-ID。
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                      API Gateway / Server                    │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │  1. Panic Recover: 异常拦截防崩溃                   │    │
-│  │  2. Trace / Log: 注入 TraceID 及耗时记录            │    │
-│  │  3. Limiter: Redis 分布式限流 / 本地令牌桶          │    │
-│  │  4. Security: HMAC-SHA256 签名 + Redis 防重放       │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                          │                                   │
-│                          ▼                                   │
-│  ┌──────────┐      ┌──────────┐      ┌──────────┐          │
-│  │ Handler  │ ───► │ Service  │ ───► │   Repo   │          │
-│  └──────────┘      └──────────┘      └──────────┘          │
-│                          │                                   │
-│                          ▼                                   │
-│              [Redis Queue] + [MySQL DB]                      │
-│                          │                                   │
-│                          ▼                                   │
-│             [Async Worker Pool Processing]                   │
-└─────────────────────────────────────────────────────────────┘
-```
+GO
+snowid.Init(1)
+app.Use("trace", middlewares.TraceMiddleware(), Lin.TracePriority)
+Log
+记录请求方法、路径、状态码、耗时和 TraceID。
 
-## 🛠️ 核心 API
+GO
+app.Use("log", middlewares.LogMiddleware, Lin.LogPriority)
+Auth
+支持：
 
-| 接口 | 方法 | 说明 | 挂载中间件 |
-| --- | --- | --- | --- |
-| `/Submit` | POST | 提交异步任务 | 限流、签名防重放、鉴权 |
-| `/Getstatus` | GET | 查询任务状态（支持缓存防击穿） | 限流、鉴权 |
-| `/HealthHandler` | GET | 服务健康检查 | 基础中间件 |
-| `/EchoRequestHandler`| POST | 测试序列化吞吐及 Panic 捕获 | 基础中间件 |
-| `/SlowHandler` | GET | 测试慢请求与高延迟阻塞处理 | 基础中间件 |
-| `/debug/pprof/*` | GET | 性能分析（CPU/内存/Goroutine） | 无 |
+HTTP
+X-AUTH-TOKEN: your-token
+或：
 
-## ⚙️ 快速启动
+HTTP
+Authorization: Bearer your-token
+使用：
 
-配置全量基于环境变量驱动，以下为 PowerShell 测试环境启动示例：
+GO
+app.Use("auth", middlewares.AuthMiddleware("your-token"), 30)
+如果 token 为空，则跳过鉴权：
 
-```powershell
-# 1. 基础及组件配置
-$env:PORT='8080'
-$env:MACHINEID='1'
-$env:REDISADDR='localhost:6379'
-$env:MYSQLPATH='root:123456@tcp(localhost:3306)/data?charset=utf8mb4&parseTime=True&loc=Local'
+GO
+middlewares.AuthMiddleware("")
+LocalLimit
+本地令牌桶限流：
 
-# 2. 安全与防重放配置
-$env:SIGNSECRET='test-secret'
-$env:SIGNWINDOWSEC='60'
+GO
+tb := ratelimit.NewTokenBucket(100, 10)
+app.Use("limit", middlewares.LocalLimitMiddleware(tb), 40)
+Sign
+基于 HMAC-SHA256 的签名校验，防止请求伪造和重放。
 
-# 3. 限流配置
-$env:MODEL='dist'                 # local(令牌桶) 或 dist(分布式)
-$env:DISTLIMITMAX='100'           # 窗口期内最大请求数
-$env:DISTLIMITWINDOWMS='1000'     # 窗口时间 (毫秒)
-$env:DISTLIMITFAILOPEN='false'    # Redis 不可用时是否放行
+请求头：
 
-# 4. Worker 协程池与并发度配置
-$env:WORKERPOOLSIZE='10'
-$env:JOBQUEUESIZE='100'
-$env:PROCESSCONCURRENCY='5'
+HTTP
+X-Sign: <signature>
+X-TimeStamp: <unix timestamp>
+X-Nonce: <random nonce>
+使用：
 
-# 5. pprof 性能分析配置
-$env:PPROF_ENABLED='true'         # 启用 pprof
-$env:PPROF_ADDR='localhost:6060'  # pprof 监听地址
+GO
+store := security.NewMemoryNonceStore()
+app.Use("sign", middlewares.SignMiddleware(
+	"your-secret",
+	time.Minute*5,
+	store,
+), 50)
+签名 payload 由以下内容组成：
 
-# 5. 启动服务
-go run main.go
-```
+TEXT
+method + path + timestamp + nonce + body
+Context
+获取 TraceID：
 
-## 📊 性能剖析 (pprof)
+GO
+traceID := Lin.GetTraceID(r.Context())
+获取鉴权主体：
 
-服务内置 pprof，用于实时性能观测。
+GO
+subject := Lin.GetAuthSubject(r.Context())
+Queue / WorkerPool
+GO
+package main
+import (
+	"Lin/queue"
+	"Lin/works"
+	"context"
+	"log"
+)
+func main() {
+	ctx := context.Background()
+	q := queue.NewMemoryQueue(100)
+	dispatcher := works.NewDispatcher(q, 100)
+	dispatcher.Start(ctx)
+	pool := works.NewWorkerPool(3, dispatcher.Jobs(), works.ProcessFunc(
+		func(ctx context.Context, job queue.Job) error {
+			log.Println("process job:", job.ID, job.Name)
+			return nil
+		},
+	))
+	pool.Start(ctx)
+	_ = q.Enqueue(ctx, queue.Job{
+		ID:      "1",
+		Name:    "demo",
+		Payload: []byte("hello"),
+	})
+	pool.Wait()
+}
+中间件优先级
+优先级数字越小，越靠外层执行。
 
-### 访问地址
+默认：
 
-启动服务后访问：`http://localhost:6060/debug/pprof/`
+GO
+const (
+	RecoverPriority = 0
+	TracePriority   = 10
+	LogPriority     = 20
+)
+推荐顺序：
 
-### 常用命令
-
-```bash
-# CPU 分析（采样 30 秒）
-go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
-
-# 内存分析
-go tool pprof http://localhost:6060/debug/pprof/heap
-
-# Web UI 火焰图
-go tool pprof -http=:8081 http://localhost:6060/debug/pprof/profile?seconds=30
-```
-```
-
-## 🔐 客户端调用规范 (以 `/Submit` 为例)
-
-访问受安全保护的接口时，客户端需在 Headers 中提供正确的签名：
-
-1. 生成当前 Unix 时间戳 `X-TimeStamp` 和随机防重放字符串 `X-Nonce`。
-2. 构造待签名 Payload: `Method + Path + TimeStamp + Nonce + Body`。
-3. 使用约定的 Secret 计算 HMAC-SHA256 哈希，转为小写 Hex 字符串，作为 `X-Sign` 传入。
-
-**正确请求示例：**
-```http
-POST /Submit HTTP/1.1
-Host: localhost:8080
-Content-Type: application/json
-X-TimeStamp: 1778673487
-X-Nonce: 613ad7b37507fd887919347fa27afac9
-X-Sign: 2928294129da27a107a1110d4b312a21e045f40ae59697f26f3c8b3fef094d6e
-
-{"name":"real_task","delay_time":5000}
-```
+TEXT
+Recover -> Trace -> Log -> Auth -> Limit -> Sign -> Handler
+说明
+Lin 适合作为学习型或小型项目基础框架使用，核心设计保持简单，主要依赖 Go 标准库 net/http。

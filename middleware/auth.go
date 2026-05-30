@@ -1,19 +1,19 @@
-package router
+package middlewares
 
 import (
-	"myapp/internal/pkg"
-	"myapp/pkg/errors"
-	"myapp/pkg/response"
+	"Lin"
+	"Lin/pkg/errors"
+	"Lin/pkg/response"
 	"net/http"
 	"strings"
 )
 
-func NewAuthMiddleware(requiretoken string) Middleware {
+func AuthMiddleware(requiretoken string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// 检查token是否匹配
 			if requiretoken == "" {
-				ctx := pkg.WithAuthSubject(r.Context(), "auth-disabled")
+				ctx := Lin.WithAuthSubject(r.Context(), "auth-disabled")
 				// 换一个上下文，继续处理
 				next.ServeHTTP(w, r.WithContext(ctx))
 				// 处理完成后，返回，避免继续处理
@@ -36,7 +36,7 @@ func NewAuthMiddleware(requiretoken string) Middleware {
 				return
 			}
 
-			ctx := pkg.WithAuthSubject(r.Context(), "authorized")
+			ctx := Lin.WithAuthSubject(r.Context(), "authorized")
 			next.ServeHTTP(w, r.WithContext(ctx))
 
 		})

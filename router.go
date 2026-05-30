@@ -1,41 +1,47 @@
-package router
+package Lin
 
 import (
+	"context"
 	"net/http"
 	"sort"
+	"time"
 )
 
 // middleware函数类型
 type Middleware func(http.Handler) http.Handler
 
-// 封装router
-type Router struct {
+// router加中间件管理加http.Server
+type App struct {
 	mux             *http.ServeMux
 	middlewareitems []middlewareitem
+	server          *http.Server
 }
 
+// 中间件优先级
 const (
 	RecoverPriority = 0
 	TracePriority   = 10
 	LogPriority     = 20
 )
 
+// 中间件项
 type middlewareitem struct {
 	name     string
 	mw       Middleware
 	priority int
 }
 
-func NewRouter() *Router {
-	return &Router{
+// 创建路由
+func NewRouter() *App {
+	return &App{
 		mux:             http.NewServeMux(),
 		middlewareitems: make([]middlewareitem, 0),
+		server:          nil,
 	}
 }
 
-//添加中间件的处理函数
-
-func (r *Router) Use(name string, mw Middleware, priority int) {
+// 添加中间件的处理函数
+func (r *App) Use(name string, mw Middleware, priority int) {
 	r.middlewareitems = append(r.middlewareitems, middlewareitem{name,
 		mw,
 		priority})
@@ -47,13 +53,13 @@ func (r *Router) Use(name string, mw Middleware, priority int) {
 
 //路由注册函数
 
-func (r *Router) HandleFunc(pattern string, handler http.HandlerFunc) {
+func (r *App) HandleFunc(pattern string, handler http.HandlerFunc) {
 	r.mux.HandleFunc(pattern, handler)
 }
 
 //实现handelr接口，在进入这个函数的时候现场进行中间件处理，然后调用handelr.SerHTTP来进入洋葱模型
 
-func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (r *App) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var handler http.Handler = r.mux
 	for i := len(r.middlewareitems) - 1; i >= 0; i-- {
 		handler = r.middlewareitems[i].mw(handler)
@@ -62,19 +68,22 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	handler.ServeHTTP(w, req)
 }
 
-//11
-
-// Chain 链式调用中间件
-func Chain(h http.Handler, middlewares ...Middleware) http.Handler {
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		h = middlewares[i](h)
+// 启动路由
+func (r *App) Run(addr string) error {
+	if addr == "" {
+		addr = ":8080"
 	}
-	return h
+	r.server = &http.Server{
+		Addr:         addr,
+		Handler:      r,
+		ReadTimeout:  time.Second,
+		WriteTimeout: time.Second,
+		IdleTimeout:  time.Second,
+	}
+	return r.server.ListenAndServe()
 }
 
-// ChainFunc 链式调用中间件
-func ChainFunc(h http.HandlerFunc, middlewares ...Middleware) http.HandlerFunc {
-	ch := Chain(h, middlewares...)
-	// 转换为.HandlerFunc类型,这里是类型断言,因为Chain返回的是http.Handler类型,而.HandlerFunc是http.Handler的实现类型
-	return ch.ServeHTTP
+// 停止路由
+func (r *App) Stop(ctx context.Context) error {
+	return r.server.Shutdown(ctx)
 }
